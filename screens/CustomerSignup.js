@@ -62,8 +62,8 @@ const CustomerSignup = () => {
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.actionButton}
-                    onPress={() => navigation.navigate('Recieve')}>
-                        <View style={[styles.buttonIconContainer, styles.receiveButton]}>
+                    onPress={() => navigation.navigate('Receive')}>
+                        <View style={[styles.buttonIconContainer, styles.ReceiveButton]}>
                             <FontAwesome name="money" size={20} color="#fff" />
                         </View>
                         <Text style={styles.buttonText}>Receive Money</Text>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     sendButton: {
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
     },
-    receiveButton: {
+    ReceiveButton: {
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
     },
     buttonText: {

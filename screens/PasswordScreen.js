@@ -59,7 +59,7 @@ const PasswordScreen = () => {
                   resizeMode="contain"
                 />
                 <Text style={styles.welcomeText}>Reset Password</Text>
-                <Text style={styles.subText}>Enter your phone number to receive OTP</Text>
+                <Text style={styles.subText}>Enter your phone number to Receive OTP</Text>
               </View>
 
               {/* Form Section */}

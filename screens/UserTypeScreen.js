@@ -109,7 +109,7 @@ const UserTypeScreen = () => {
               
               <TouchableOpacity 
                 style={styles.actionButton}
-                onPress={() => navigation.navigate('Recieve')}
+                onPress={() => navigation.navigate('Receive')}
                 activeOpacity={0.8}
               >
                 <LinearGradient
@@ -118,7 +118,7 @@ const UserTypeScreen = () => {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <MaterialIcons name="call-received" size={24} color="#fff" />
+                  <MaterialIcons name="call-Received" size={24} color="#fff" />
                 </LinearGradient>
                 <Text style={styles.buttonText}>Receive</Text>
               </TouchableOpacity>

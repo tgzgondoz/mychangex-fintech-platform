@@ -50,7 +50,7 @@ const VendorSignup = () => {
                         style={styles.actionButton}
                         onPress={() => navigation.navigate('ReceivePayment')}
                     >
-                        <View style={[styles.buttonIconContainer, styles.receiveButton]}>
+                        <View style={[styles.buttonIconContainer, styles.ReceiveButton]}>
                             <MaterialIcons name="qr-code-scanner" size={24} color="#fff" />
                         </View>
                         <Text style={styles.buttonText}>Receive Payment</Text>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 5,
     },
-    receiveButton: {
+    ReceiveButton: {
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
     },
     analyticsButton: {

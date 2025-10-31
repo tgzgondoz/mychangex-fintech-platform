@@ -9,12 +9,20 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
-  // Removed Alert as we are using a custom modal
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
-import { supabase, formatZimbabwePhone } from './supabase';
+import { 
+  supabase, 
+  formatZimbabwePhone, 
+  getUserSession, 
+  getUserProfileByPhone,
+  transferFunds,
+  executeManualTransaction 
+} from './supabase';
 
 // Reusable custom modal for displaying messages
 const MessageModal = ({ visible, title, message, onClose }) => {
@@ -45,8 +53,9 @@ const MyChangeXScreen = () => {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
-  const [showPlatformModal, setShowPlatformModal] = useState(false);
+  const [recipientId, setRecipientId] = useState(null);
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [showPhoneFormModal, setShowPhoneFormModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -80,20 +89,35 @@ const MyChangeXScreen = () => {
   // --- Data Fetching ---
   const fetchUserData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        setUserPhone(user.phone || '');
-
-        const { data, error } = await supabase
-          .from('users')
-          .select('balance')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
-        setUserBalance(data.balance);
+      // Get user from session (PIN-based auth)
+      const sessionResult = await getUserSession();
+      
+      if (!sessionResult.success || !sessionResult.user) {
+        setMessageModal({
+          visible: true,
+          title: 'Error',
+          message: 'Please login again.',
+        });
+        navigation.navigate('Login');
+        return;
       }
+
+      const user = sessionResult.user;
+      setUserId(user.id);
+      setUserPhone(user.phone || '');
+
+      // Get user profile with balance
+      const { data: profileData, error } = await getUserProfileByPhone(user.phone);
+      
+      if (error) {
+        // Use session data as fallback
+        setUserBalance(user.balance || 0);
+        console.log('Using session balance:', user.balance);
+      } else {
+        setUserBalance(profileData.balance || 0);
+        console.log('Fetched balance from profile:', profileData.balance);
+      }
+
     } catch (error) {
       console.error('Error fetching user data:', error);
       setMessageModal({
@@ -101,6 +125,82 @@ const MyChangeXScreen = () => {
         title: 'Error',
         message: 'Failed to load user data.',
       });
+    }
+  };
+
+  // --- Balance Validation Functions ---
+  
+  /**
+   * Check if amount exceeds balance
+   */
+  const exceedsBalance = () => {
+    const sendAmount = parseFloat(amount) || 0;
+    return sendAmount > userBalance;
+  };
+
+  /**
+   * Check if amount is valid (positive and within balance)
+   */
+  const isValidAmount = () => {
+    const sendAmount = parseFloat(amount) || 0;
+    return sendAmount > 0 && sendAmount <= userBalance;
+  };
+
+  /**
+   * Check if send button should be enabled
+   */
+  const isSendEnabled = () => {
+    return phoneNumber && isValidAmount() && !loading;
+  };
+
+  /**
+   * Get balance status message
+   */
+  const getBalanceStatus = () => {
+    const sendAmount = parseFloat(amount) || 0;
+    
+    if (sendAmount === 0) return null;
+    
+    if (sendAmount > userBalance) {
+      const shortage = sendAmount - userBalance;
+      return {
+        type: 'error',
+        message: `Insufficient balance. You need $${shortage.toFixed(2)} more.`,
+        color: '#FF6B6B'
+      };
+    } else {
+      const remaining = userBalance - sendAmount;
+      return {
+        type: 'success', 
+        message: `Remaining balance: $${remaining.toFixed(2)}`,
+        color: '#4CAF50'
+      };
+    }
+  };
+
+  /**
+   * Get send button text based on current state
+   */
+  const getSendButtonText = () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      return 'Enter Amount';
+    } else if (exceedsBalance()) {
+      return 'Insufficient Balance';
+    } else if (loading) {
+      return 'Processing...';
+    } else {
+      return `Send $${amount}`;
+    }
+  };
+
+  /**
+   * Get send button colors based on current state
+   */
+  const getSendButtonColors = () => {
+    if (!isSendEnabled()) {
+      return ['#CCCCCC', '#BBBBBB']; // Gray when disabled
+    } else {
+      return ['#4CAF50', '#45a049']; // Green when enabled
     }
   };
 
@@ -116,15 +216,14 @@ const MyChangeXScreen = () => {
     }
   };
 
-  // Handle platform selection from the main UI
-  const handlePlatformSelect = (platform) => {
-    setSelectedPlatform(platform);
-    setShowPlatformModal(true);
+  // Handle Send Coupon button press
+  const handleSendCoupon = () => {
+    setShowRecipientModal(true);
   };
 
   // Handle QR scan option from the modal
   const handleScanQR = async () => {
-    setShowPlatformModal(false);
+    setShowRecipientModal(false);
 
     if (!permission?.granted) {
       await requestCameraAccess();
@@ -145,7 +244,68 @@ const MyChangeXScreen = () => {
 
   // Handle phone number option from the modal
   const handlePhoneOption = () => {
-    setShowPlatformModal(false);
+    setShowRecipientModal(false);
+    setShowPhoneFormModal(true);
+  };
+
+  // Handle phone form submission
+  const handlePhoneFormSubmit = async () => {
+    if (!phoneNumber.trim()) {
+      setMessageModal({
+        visible: true,
+        title: 'Error',
+        message: 'Please enter a phone number.',
+      });
+      return;
+    }
+
+    const formattedPhone = formatZimbabwePhone(phoneNumber);
+
+    // Check for self-transfer
+    if (formattedPhone === userPhone) {
+      setMessageModal({
+        visible: true,
+        title: 'Error',
+        message: 'You cannot send money to yourself.',
+      });
+      return;
+    }
+
+    try {
+      // Verify recipient exists
+      const { data: recipientData, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, balance')
+        .eq('phone', formattedPhone)
+        .single();
+
+      if (error) {
+        setMessageModal({
+          visible: true,
+          title: 'Error',
+          message: 'Recipient not found in the system.',
+        });
+        return;
+      }
+
+      setRecipientName(recipientData.full_name || 'User');
+      setRecipientId(recipientData.id);
+      setShowPhoneFormModal(false);
+
+      setMessageModal({
+        visible: true,
+        title: 'Recipient Found',
+        message: `Recipient: ${recipientData.full_name || 'User'} (${phoneNumber}). You can now enter the amount and send.`,
+      });
+
+    } catch (error) {
+      console.error('Error verifying recipient:', error);
+      setMessageModal({
+        visible: true,
+        title: 'Error',
+        message: 'Failed to verify recipient. Please try again.',
+      });
+    }
   };
 
   // Handle the result of a QR code scan
@@ -176,8 +336,8 @@ const MyChangeXScreen = () => {
 
         // Verify recipient exists
         const { data: recipientData, error } = await supabase
-          .from('users')
-          .select('id, name')
+          .from('profiles')
+          .select('id, full_name, phone, balance')
           .eq('phone', formattedPhone)
           .single();
 
@@ -194,13 +354,14 @@ const MyChangeXScreen = () => {
 
         // Set phone number and recipient name from the QR code
         setPhoneNumber(scannedPhone);
-        setRecipientName(recipientData.name || 'User');
+        setRecipientName(recipientData.full_name || 'User');
+        setRecipientId(recipientData.id);
         setShowCamera(false);
 
         setMessageModal({
           visible: true,
           title: 'QR Scanned',
-          message: `Coupon scanned for ${recipientData.name || 'User'} (${scannedPhone}).`,
+          message: `Coupon scanned for ${recipientData.full_name || 'User'} (${scannedPhone}). You can now enter the amount and send.`,
         });
 
       } else {
@@ -231,12 +392,32 @@ const MyChangeXScreen = () => {
           return;
         }
 
+        // Verify recipient exists
+        const { data: recipientData, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone, balance')
+          .eq('phone', formattedPhone)
+          .single();
+
+        if (error) {
+          setMessageModal({
+            visible: true,
+            title: 'Error',
+            message: 'Recipient not found in the system.',
+          });
+          setShowCamera(false);
+          isScanning.current = false;
+          return;
+        }
+
         setPhoneNumber(phoneMatch[0]);
+        setRecipientName(recipientData.full_name || 'User');
+        setRecipientId(recipientData.id);
         setShowCamera(false);
         setMessageModal({
           visible: true,
           title: 'QR Scanned',
-          message: `Detected phone number: ${phoneMatch[0]}.`,
+          message: `Detected phone number: ${phoneMatch[0]}. You can now enter the amount and send.`,
         });
       } else {
         setShowCamera(false);
@@ -251,24 +432,27 @@ const MyChangeXScreen = () => {
     }
   }, [userPhone]);
 
-  // Handle the "Send Coupon" button press
+  // Handle the "Send" button press with real-time transactions
   const handleSend = async () => {
     // --- Input Validation ---
-    if (!selectedPlatform) {
-      setMessageModal({ visible: true, title: 'Error', message: 'Please select a platform.' });
-      return;
-    }
     if (!phoneNumber) {
       setMessageModal({ visible: true, title: 'Error', message: 'Please enter or scan a recipient phone number.' });
       return;
     }
+    
     const sendAmount = parseFloat(amount);
     if (!amount || sendAmount <= 0) {
       setMessageModal({ visible: true, title: 'Error', message: 'Please enter a valid amount.' });
       return;
     }
-    if (sendAmount > userBalance) {
-      setMessageModal({ visible: true, title: 'Error', message: 'Insufficient balance.' });
+    
+    // --- BALANCE VALIDATION ---
+    if (exceedsBalance()) {
+      setMessageModal({ 
+        visible: true, 
+        title: 'Insufficient Balance', 
+        message: `You cannot send $${sendAmount.toFixed(2)}. Your balance is only $${userBalance.toFixed(2)}.` 
+      });
       return;
     }
 
@@ -278,70 +462,81 @@ const MyChangeXScreen = () => {
       return;
     }
 
+    if (!recipientId) {
+      setMessageModal({ visible: true, title: 'Error', message: 'Recipient not properly identified. Please reselect recipient.' });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Verify recipient exists before initiating transaction
-      const { data: recipientData, error: recipientError } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('phone', formattedRecipientPhone)
-        .single();
+      console.log('🚀 Starting transaction process...', {
+        senderId: userId,
+        recipientId: recipientId,
+        amount: sendAmount
+      });
 
-      if (recipientError) {
-        throw new Error('Recipient not found in the system.');
+      // Try RPC method first (preferred - atomic transaction)
+      let transactionResult = await transferFunds(userId, recipientId, sendAmount);
+
+      // If RPC fails, try manual method as fallback
+      if (!transactionResult.success) {
+        console.log('🔄 RPC transaction failed, trying manual method...', transactionResult.error);
+        transactionResult = await executeManualTransaction(userId, recipientId, sendAmount);
       }
 
-      // Use a Supabase RPC function for a secure, atomic transaction
-      const { data: transactionData, error: transactionError } = await supabase.rpc(
-        'transfer_funds',
-        {
-          sender_id: userId,
-          receiver_phone: formattedRecipientPhone,
-          transfer_amount: sendAmount,
-          platform: selectedPlatform
-        }
-      );
+      if (!transactionResult.success) {
+        throw new Error(transactionResult.error || 'Transaction failed');
+      }
 
-      if (transactionError) throw transactionError;
+      // Update local balance immediately for better UX
+      const newBalance = userBalance - sendAmount;
+      setUserBalance(newBalance);
 
-      // Show success message and navigate
+      // Show success message
       setMessageModal({
         visible: true,
         title: 'Success!',
-        message: `Sent $${sendAmount} via ${selectedPlatform} to ${recipientData.name || phoneNumber}.`,
+        message: `Successfully sent $${sendAmount.toFixed(2)} to ${recipientName || phoneNumber}. Your new balance is $${newBalance.toFixed(2)}.`,
       });
-
-      // Refresh user balance after successful transaction
-      await fetchUserData();
 
       // Reset form fields
       setAmount('');
       setPhoneNumber('');
       setRecipientName('');
+      setRecipientId(null);
 
-      // Navigate to confirmation screen
-      navigation.navigate('SendCoupon', {
-        recipient: phoneNumber,
-        recipientName: recipientData.name,
-        amount: sendAmount,
-        platform: selectedPlatform,
-        transactionId: transactionData.transaction_id,
-      });
+      // Optional: Refresh user data to ensure consistency
+      setTimeout(() => {
+        fetchUserData();
+      }, 1000);
 
     } catch (error) {
-      console.error('Transaction error:', error);
+      console.error('❌ Transaction error:', error);
+      
+      let errorMessage = error.message || 'Failed to complete transaction. Please try again.';
+      
+      // User-friendly error messages
+      if (error.message.includes('Insufficient funds')) {
+        errorMessage = 'Insufficient balance for this transaction.';
+      } else if (error.message.includes('not found')) {
+        errorMessage = 'Recipient account not found. Please check the phone number.';
+      } else if (error.message.includes('network') || error.message.includes('Network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+
       setMessageModal({
         visible: true,
         title: 'Transaction Failed',
-        message: error.message || 'Failed to complete transaction.',
+        message: errorMessage,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const platforms = ['Ecocash', 'Omari', 'MyChange'];
+  // Get balance status for display
+  const balanceStatus = getBalanceStatus();
 
   return (
     <LinearGradient
@@ -351,116 +546,198 @@ const MyChangeXScreen = () => {
       end={{ x: 0.5, y: 1 }}
     >
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          {/* Header */}
-          <Text style={styles.header}>Send Digital Coupon</Text>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.container}>
+            {/* Header */}
+            <Text style={styles.header}>Send Digital Coupon</Text>
 
-          {/* Balance Display */}
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Your Balance</Text>
-            <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
-          </View>
+            {/* Balance Display */}
+            <View style={styles.balanceContainer}>
+              <Text style={styles.balanceLabel}>Your Balance</Text>
+              <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
+            </View>
 
-          {/* Platform Selection */}
-          <View style={styles.platformContainer}>
-            <Text style={styles.label}>Select Platform</Text>
-            <View style={styles.platformButtons}>
-              {platforms.map((platform) => (
-                <Pressable
-                  key={platform}
-                  style={[
-                    styles.platformButton,
-                    selectedPlatform === platform && styles.selectedPlatformButton,
-                  ]}
-                  onPress={() => handlePlatformSelect(platform)}
-                  android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
+            {/* Recipient Info Display */}
+            {phoneNumber ? (
+              <View style={styles.recipientContainer}>
+                <Text style={styles.recipientLabel}>Recipient</Text>
+                <Text style={styles.recipientInfo}>
+                  {recipientName || 'User'} ({phoneNumber})
+                </Text>
+                <Pressable 
+                  style={styles.changeRecipientButton}
+                  onPress={() => {
+                    setPhoneNumber('');
+                    setRecipientName('');
+                    setRecipientId(null);
+                    setShowRecipientModal(true);
+                  }}
                 >
-                  <Text style={styles.platformButtonText}>{platform}</Text>
+                  <Text style={styles.changeRecipientText}>Change Recipient</Text>
                 </Pressable>
-              ))}
-            </View>
-          </View>
+              </View>
+            ) : null}
 
-          {/* Phone Number Input */}
-          <View style={styles.amountContainer}>
-            <Text style={styles.label}>Recipient Phone Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter phone number"
-              placeholderTextColor="rgba(255,255,255,0.6)"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              selectionColor="#ffffff"
-              returnKeyType="done"
-            />
-          </View>
-
-          {/* Amount Input */}
-          <View style={styles.amountContainer}>
-            <Text style={styles.label}>Enter Amount</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>$</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor="rgba(255,255,255,0.6)"
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-                selectionColor="#ffffff"
-                returnKeyType="done"
-              />
-            </View>
-          </View>
-
-          {/* Send Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.scanButton,
-              pressed && styles.scanButtonPressed,
-              loading && styles.disabledButton,
-            ]}
-            onPress={handleSend}
-            disabled={loading}
-            android_ripple={{ color: 'rgba(1, 54, 192, 0.1)' }}
-          >
-            <LinearGradient
-              colors={['#ffffff', '#f8f9fa']}
-              style={styles.buttonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#0136c0" />
-              ) : (
-                <Text style={styles.scanButtonText}>Send Coupon</Text>
+            {/* Amount Input */}
+            <View style={styles.amountContainer}>
+              <Text style={styles.label}>Enter Amount</Text>
+              <View style={[
+                styles.amountInputContainer,
+                exceedsBalance() && styles.amountInputContainerError
+              ]}>
+                <Text style={[
+                  styles.currencySymbol,
+                  exceedsBalance() && styles.currencySymbolError
+                ]}>$</Text>
+                <TextInput
+                  style={[
+                    styles.amountInput,
+                    exceedsBalance() && styles.amountInputError
+                  ]}
+                  placeholder="0.00"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="numeric"
+                  selectionColor="#ffffff"
+                  returnKeyType="done"
+                />
+              </View>
+              
+              {/* Balance Status Message */}
+              {balanceStatus && (
+                <Text style={[styles.balanceStatus, { color: balanceStatus.color }]}>
+                  {balanceStatus.message}
+                </Text>
               )}
-            </LinearGradient>
-          </Pressable>
-        </View>
+            </View>
 
-        {/* Modal for Platform Options */}
+            {/* Send Coupon Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.scanButton,
+                pressed && styles.scanButtonPressed,
+                loading && styles.disabledButton,
+              ]}
+              onPress={handleSendCoupon}
+              disabled={loading}
+              android_ripple={{ color: 'rgba(1, 54, 192, 0.1)' }}
+            >
+              <LinearGradient
+                colors={['#ffffff', '#f8f9fa']}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.scanButtonText}>
+                  {phoneNumber ? 'Change Recipient' : 'Send Coupon'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+
+            {/* Send Button (only enabled when form is filled and amount is valid) */}
+            {phoneNumber && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sendButton,
+                  !isSendEnabled() && styles.sendButtonDisabled,
+                  pressed && isSendEnabled() && styles.sendButtonPressed,
+                ]}
+                onPress={handleSend}
+                disabled={!isSendEnabled()}
+                android_ripple={isSendEnabled() ? { color: 'rgba(1, 54, 192, 0.1)' } : undefined}
+              >
+                <LinearGradient
+                  colors={getSendButtonColors()}
+                  style={styles.buttonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={[
+                      styles.sendButtonText,
+                      !isSendEnabled() && styles.disabledButtonText
+                    ]}>
+                      {getSendButtonText()}
+                    </Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Modal for Recipient Options */}
         <Modal
-          visible={showPlatformModal}
+          visible={showRecipientModal}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setShowPlatformModal(false)}
+          onRequestClose={() => setShowRecipientModal(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>How to add recipient for {selectedPlatform}?</Text>
+              <Text style={styles.modalTitle}>Add Recipient</Text>
               <Pressable style={styles.modalButton} onPress={handleScanQR}>
                 <Text style={styles.modalButtonText}>Scan QR Code</Text>
               </Pressable>
               <Pressable style={styles.modalButton} onPress={handlePhoneOption}>
                 <Text style={styles.modalButtonText}>Enter Phone Number</Text>
               </Pressable>
-              <Pressable onPress={() => setShowPlatformModal(false)}>
+              <Pressable onPress={() => setShowRecipientModal(false)}>
                 <Text style={styles.modalCancel}>Cancel</Text>
               </Pressable>
             </View>
           </View>
+        </Modal>
+
+        {/* Phone Form Modal */}
+        <Modal
+          visible={showPhoneFormModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowPhoneFormModal(false)}
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.phoneFormModalContent}>
+              <Text style={styles.modalTitle}>Enter Recipient Phone Number</Text>
+              
+              <TextInput
+                style={styles.phoneFormInput}
+                placeholder="Enter phone number"
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                selectionColor="#ffffff"
+                autoFocus={true}
+              />
+              
+              <View style={styles.phoneFormButtons}>
+                <Pressable 
+                  style={styles.phoneFormCancelButton}
+                  onPress={() => setShowPhoneFormModal(false)}
+                >
+                  <Text style={styles.phoneFormCancelText}>Cancel</Text>
+                </Pressable>
+                
+                <Pressable 
+                  style={[
+                    styles.phoneFormSubmitButton,
+                    !phoneNumber && styles.disabledButton
+                  ]}
+                  onPress={handlePhoneFormSubmit}
+                  disabled={!phoneNumber}
+                >
+                  <Text style={styles.phoneFormSubmitText}>Submit</Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Camera Modal for QR Scanning */}
@@ -526,10 +803,14 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 24,
+    paddingBottom: 40,
   },
   header: {
     fontSize: 28,
@@ -557,31 +838,35 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
   },
-  platformContainer: {
+  recipientContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 24,
-  },
-  platformButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  platformButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 12,
-    borderRadius: 10,
-    flex: 1,
     alignItems: 'center',
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  selectedPlatformButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    borderColor: '#ffffff',
+  recipientLabel: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 8,
   },
-  platformButtonText: {
+  recipientInfo: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  changeRecipientButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  changeRecipientText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   amountContainer: {
     marginBottom: 24,
@@ -592,15 +877,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
-  input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
-    color: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -608,11 +884,17 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.5)',
     paddingBottom: 12,
   },
+  amountInputContainerError: {
+    borderBottomColor: '#FF6B6B',
+  },
   currencySymbol: {
     fontSize: 28,
     color: '#ffffff',
     marginRight: 12,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
+  },
+  currencySymbolError: {
+    color: '#FF6B6B',
   },
   amountInput: {
     flex: 1,
@@ -622,7 +904,32 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
     includeFontPadding: false,
   },
+  amountInputError: {
+    color: '#FF6B6B',
+  },
+  balanceStatus: {
+    fontSize: 14,
+    marginTop: 8,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   scanButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  sendButton: {
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 24,
@@ -638,7 +945,24 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  sendButtonDisabled: {
+    opacity: 0.5,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
   scanButtonPressed: {
+    opacity: 0.9,
+  },
+  sendButtonPressed: {
     opacity: 0.9,
   },
   disabledButton: {
@@ -655,6 +979,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
+  sendButtonText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '600',
+    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
+  },
+  disabledButtonText: {
+    color: '#888888',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -668,11 +1001,18 @@ const styles = StyleSheet.create({
     width: '80%',
     alignItems: 'center',
   },
+  phoneFormModalContent: {
+    backgroundColor: '#0136c0',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    alignItems: 'center',
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 10,
+    marginBottom: 20,
     textAlign: 'center',
   },
   modalMessage: {
@@ -698,6 +1038,47 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 16,
     marginTop: 10,
+  },
+  phoneFormInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 15,
+    borderRadius: 10,
+    fontSize: 16,
+    color: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: '100%',
+    marginBottom: 20,
+  },
+  phoneFormButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 10,
+  },
+  phoneFormCancelButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  phoneFormCancelText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  phoneFormSubmitButton: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  phoneFormSubmitText: {
+    color: '#0136c0',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   cameraContainer: {
     flex: 1,
