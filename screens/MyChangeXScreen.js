@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -23,6 +24,7 @@ import {
   transferFunds,
   executeManualTransaction 
 } from './supabase';
+import { NotificationService } from '../screens/services/notificationService';
 
 // Reusable custom modal for displaying messages
 const MessageModal = ({ visible, title, message, onClose }) => {
@@ -62,6 +64,7 @@ const MyChangeXScreen = () => {
   const [userBalance, setUserBalance] = useState(0);
   const [userId, setUserId] = useState(null);
   const [userPhone, setUserPhone] = useState('');
+  const [isTransactionSuccess, setIsTransactionSuccess] = useState(false);
 
   // Custom modal state
   const [messageModal, setMessageModal] = useState({
@@ -74,6 +77,7 @@ const MyChangeXScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const isScanning = useRef(false);
+  const autoNavigateTimeoutRef = useRef(null);
 
   // --- Component Lifecycle & Side Effects ---
   useLayoutEffect(() => {
@@ -84,7 +88,49 @@ const MyChangeXScreen = () => {
 
   useEffect(() => {
     fetchUserData();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (autoNavigateTimeoutRef.current) {
+        clearTimeout(autoNavigateTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // REAL-TIME BALANCE SUBSCRIPTION FOR MyChangeXScreen
+  useEffect(() => {
+    if (!userId) return;
+
+    console.log('🔔 Setting up real-time balance subscription in MyChangeX...');
+
+    // Subscribe to balance changes for this user
+    const balanceSubscription = supabase
+      .channel('mychangex_balance_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('💰 MyChangeX: Balance updated in real-time:', payload.new.balance);
+          
+          // Update local balance immediately
+          setUserBalance(payload.new.balance);
+          
+          console.log('✅ MyChangeX: Balance updated to:', payload.new.balance);
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      console.log('🔕 Cleaning up MyChangeX balance subscription');
+      balanceSubscription.unsubscribe();
+    };
+  }, [userId]);
 
   // --- Data Fetching ---
   const fetchUserData = async () => {
@@ -130,32 +176,25 @@ const MyChangeXScreen = () => {
 
   // --- Balance Validation Functions ---
   
-  /**
-   * Check if amount exceeds balance
-   */
   const exceedsBalance = () => {
     const sendAmount = parseFloat(amount) || 0;
     return sendAmount > userBalance;
   };
 
-  /**
-   * Check if amount is valid (positive and within balance)
-   */
   const isValidAmount = () => {
     const sendAmount = parseFloat(amount) || 0;
     return sendAmount > 0 && sendAmount <= userBalance;
   };
 
-  /**
-   * Check if send button should be enabled
-   */
-  const isSendEnabled = () => {
-    return phoneNumber && isValidAmount() && !loading;
+  const isWithinChangeLimit = () => {
+    const sendAmount = parseFloat(amount) || 0;
+    return sendAmount < 1.00;
   };
 
-  /**
-   * Get balance status message
-   */
+  const isSendEnabled = () => {
+    return phoneNumber && isValidAmount() && isWithinChangeLimit() && !loading;
+  };
+
   const getBalanceStatus = () => {
     const sendAmount = parseFloat(amount) || 0;
     
@@ -168,6 +207,12 @@ const MyChangeXScreen = () => {
         message: `Insufficient balance. You need $${shortage.toFixed(2)} more.`,
         color: '#FF6B6B'
       };
+    } else if (sendAmount >= 1.00) {
+      return {
+        type: 'error',
+        message: 'Change coupons must be less than $1.00.',
+        color: '#FF6B6B'
+      };
     } else {
       const remaining = userBalance - sendAmount;
       return {
@@ -178,14 +223,13 @@ const MyChangeXScreen = () => {
     }
   };
 
-  /**
-   * Get send button text based on current state
-   */
   const getSendButtonText = () => {
     if (!amount || parseFloat(amount) <= 0) {
       return 'Enter Amount';
     } else if (exceedsBalance()) {
       return 'Insufficient Balance';
+    } else if (!isWithinChangeLimit()) {
+      return 'Max $0.99 for Change';
     } else if (loading) {
       return 'Processing...';
     } else {
@@ -193,20 +237,29 @@ const MyChangeXScreen = () => {
     }
   };
 
-  /**
-   * Get send button colors based on current state
-   */
   const getSendButtonColors = () => {
     if (!isSendEnabled()) {
-      return ['#CCCCCC', '#BBBBBB']; // Gray when disabled
+      return ['#CCCCCC', '#BBBBBB'];
     } else {
-      return ['#4CAF50', '#45a049']; // Green when enabled
+      return ['#4CAF50', '#45a049'];
     }
+  };
+
+  // Handle amount input change with validation
+  const handleAmountChange = (text) => {
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      return;
+    }
+    if (parts[1] && parts[1].length > 2) {
+      return;
+    }
+    setAmount(cleaned);
   };
 
   // --- User Interaction Handlers ---
 
-  // Request camera permission for QR scanning
   const requestCameraAccess = async () => {
     try {
       await requestPermission();
@@ -216,12 +269,10 @@ const MyChangeXScreen = () => {
     }
   };
 
-  // Handle Send Coupon button press
   const handleSendCoupon = () => {
     setShowRecipientModal(true);
   };
 
-  // Handle QR scan option from the modal
   const handleScanQR = async () => {
     setShowRecipientModal(false);
 
@@ -242,13 +293,11 @@ const MyChangeXScreen = () => {
     setShowCamera(true);
   };
 
-  // Handle phone number option from the modal
   const handlePhoneOption = () => {
     setShowRecipientModal(false);
     setShowPhoneFormModal(true);
   };
 
-  // Handle phone form submission
   const handlePhoneFormSubmit = async () => {
     if (!phoneNumber.trim()) {
       setMessageModal({
@@ -308,21 +357,18 @@ const MyChangeXScreen = () => {
     }
   };
 
-  // Handle the result of a QR code scan
   const handleBarCodeScanned = useCallback(async ({ type, data }) => {
     if (isScanning.current) return;
 
     isScanning.current = true;
 
     try {
-      // Try to parse as JSON for a structured QR code
       const parsedData = JSON.parse(data);
 
       if (parsedData.type === 'coupon' && parsedData.phone) {
         const scannedPhone = parsedData.phone;
         const formattedPhone = formatZimbabwePhone(scannedPhone);
 
-        // Check for self-transfer
         if (formattedPhone === userPhone) {
           setMessageModal({
             visible: true,
@@ -334,7 +380,6 @@ const MyChangeXScreen = () => {
           return;
         }
 
-        // Verify recipient exists
         const { data: recipientData, error } = await supabase
           .from('profiles')
           .select('id, full_name, phone, balance')
@@ -352,7 +397,6 @@ const MyChangeXScreen = () => {
           return;
         }
 
-        // Set phone number and recipient name from the QR code
         setPhoneNumber(scannedPhone);
         setRecipientName(recipientData.full_name || 'User');
         setRecipientId(recipientData.id);
@@ -365,7 +409,6 @@ const MyChangeXScreen = () => {
         });
 
       } else {
-        // Handle invalid or unexpected QR format
         setShowCamera(false);
         setMessageModal({
           visible: true,
@@ -374,7 +417,6 @@ const MyChangeXScreen = () => {
         });
       }
     } catch (error) {
-      // Handle cases where data is not JSON (e.g., a simple phone number string)
       const phoneRegex = /(\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})/;
       const phoneMatch = data.match(phoneRegex);
 
@@ -392,7 +434,6 @@ const MyChangeXScreen = () => {
           return;
         }
 
-        // Verify recipient exists
         const { data: recipientData, error } = await supabase
           .from('profiles')
           .select('id, full_name, phone, balance')
@@ -432,7 +473,7 @@ const MyChangeXScreen = () => {
     }
   }, [userPhone]);
 
-  // Handle the "Send" button press with real-time transactions
+  // UPDATED: Handle the "Send" button press with MANUAL TRANSACTION FALLBACK and improved auto-navigation
   const handleSend = async () => {
     // --- Input Validation ---
     if (!phoneNumber) {
@@ -443,6 +484,16 @@ const MyChangeXScreen = () => {
     const sendAmount = parseFloat(amount);
     if (!amount || sendAmount <= 0) {
       setMessageModal({ visible: true, title: 'Error', message: 'Please enter a valid amount.' });
+      return;
+    }
+    
+    // --- CHANGE COUPON LIMIT VALIDATION ---
+    if (sendAmount >= 1.00) {
+      setMessageModal({ 
+        visible: true, 
+        title: 'Change Coupon Limit', 
+        message: 'Change coupons must be less than $1.00. Please enter an amount between $0.01 and $0.99.' 
+      });
       return;
     }
     
@@ -470,54 +521,186 @@ const MyChangeXScreen = () => {
     setLoading(true);
 
     try {
-      console.log('🚀 Starting transaction process...', {
+      console.log('🚀 Starting change coupon transaction process...', {
         senderId: userId,
         recipientId: recipientId,
         amount: sendAmount
       });
 
-      // Try RPC method first (preferred - atomic transaction)
+      // OPTIMISTIC UPDATE: Update UI immediately for better UX
+      const oldBalance = userBalance;
+      const newBalance = oldBalance - sendAmount;
+      setUserBalance(newBalance);
+
+      // Try RPC method first
+      console.log('💰 Trying RPC transfer_funds function...');
       let transactionResult = await transferFunds(userId, recipientId, sendAmount);
 
-      // If RPC fails, try manual method as fallback
+      // If RPC fails, use SIMPLE manual method
       if (!transactionResult.success) {
-        console.log('🔄 RPC transaction failed, trying manual method...', transactionResult.error);
-        transactionResult = await executeManualTransaction(userId, recipientId, sendAmount);
+        console.log('🔄 RPC failed, using simple manual transaction...');
+        
+        // Create transaction record
+        const { data: transaction, error: transactionError } = await supabase
+          .from('transactions')
+          .insert({
+            sender_id: userId,
+            receiver_id: recipientId,
+            amount: sendAmount,
+            status: 'completed',
+            type: 'transfer'
+          })
+          .select()
+          .single();
+          
+        if (transactionError) {
+          throw new Error(`Transaction creation failed: ${transactionError.message}`);
+        }
+        
+        // Update sender balance
+        const { error: senderError } = await supabase
+          .from('profiles')
+          .update({ 
+            balance: oldBalance - sendAmount,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (senderError) {
+          throw new Error(`Sender update failed: ${senderError.message}`);
+        }
+        
+        // Update receiver balance
+        const { data: receiverProfile } = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', recipientId)
+          .single();
+          
+        if (receiverProfile) {
+          const { error: receiverError } = await supabase
+            .from('profiles')
+            .update({ 
+              balance: receiverProfile.balance + sendAmount,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', recipientId);
+            
+          if (receiverError) {
+            throw new Error(`Receiver update failed: ${receiverError.message}`);
+          }
+        }
+        
+        transactionResult = {
+          success: true,
+          transaction: transaction,
+          message: 'Manual transfer successful'
+        };
       }
 
       if (!transactionResult.success) {
+        // REVERT optimistic update if transaction fails
+        setUserBalance(oldBalance);
         throw new Error(transactionResult.error || 'Transaction failed');
       }
 
-      // Update local balance immediately for better UX
-      const newBalance = userBalance - sendAmount;
-      setUserBalance(newBalance);
+      // Mark transaction as successful
+      setIsTransactionSuccess(true);
 
-      // Show success message
+      // ✅ PUSH NOTIFICATION: Send local notification to sender
+      await NotificationService.scheduleTransactionNotification(
+        'Change Coupon Sent! 🎉',
+        `You sent $${sendAmount.toFixed(2)} to ${recipientName || phoneNumber}`,
+        { 
+          type: 'transaction_sent',
+          amount: sendAmount,
+          recipient: recipientName || phoneNumber,
+          transaction_id: transactionResult.transaction?.id,
+          screen: 'Notifications'
+        }
+      );
+
+      // ✅ PUSH NOTIFICATION: Send to BOTH users via edge function
+      try {
+        console.log('🔔 Preparing to send push notifications...');
+        
+        // Get sender's name for the notification
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .single();
+        
+        const senderName = senderProfile?.full_name || 'User';
+        
+        // Use the new method from NotificationService
+        const notificationResult = await NotificationService.sendPushNotificationViaEdgeFunction(
+          transactionResult.transaction?.id, // transaction ID
+          userId,                           // sender ID
+          recipientId,                      // receiver ID
+          sendAmount,                       // amount
+          recipientName || 'User',          // recipient name
+          senderName                        // sender name
+        );
+        
+        if (notificationResult.success) {
+          console.log('✅ Push notifications sent successfully:', notificationResult);
+        } else {
+          console.warn('⚠️ Push notification partially failed:', notificationResult);
+        }
+      } catch (notificationError) {
+        console.error('❌ Push notification error (non-critical):', notificationError);
+        // Don't fail the transaction if notifications fail
+      }
+
+      // Show success message with auto-navigation info
       setMessageModal({
         visible: true,
-        title: 'Success!',
-        message: `Successfully sent $${sendAmount.toFixed(2)} to ${recipientName || phoneNumber}. Your new balance is $${newBalance.toFixed(2)}.`,
+        title: 'Change Coupon Sent! 🎉',
+        message: `Successfully sent $${sendAmount.toFixed(2)} change coupon to ${recipientName || phoneNumber}. Your new balance is $${newBalance.toFixed(2)}.\n\n✅ You and ${recipientName || 'the recipient'} will receive push notifications.\n\n⏳ Auto-navigating to Home in 3 seconds...`,
       });
 
-      // Reset form fields
-      setAmount('');
-      setPhoneNumber('');
-      setRecipientName('');
-      setRecipientId(null);
-
-      // Optional: Refresh user data to ensure consistency
+      // Reset form fields after a short delay
       setTimeout(() => {
-        fetchUserData();
-      }, 1000);
+        setAmount('');
+        setPhoneNumber('');
+        setRecipientName('');
+        setRecipientId(null);
+      }, 500);
+
+      // ✅ AUTOMATICALLY NAVIGATE TO HOME SCREEN AFTER 3 SECONDS
+      console.log('🏠 Setting up auto-navigation to Home screen...');
+      
+      // Clear any existing timeout
+      if (autoNavigateTimeoutRef.current) {
+        clearTimeout(autoNavigateTimeoutRef.current);
+      }
+      
+      // Set new timeout for auto-navigation
+      autoNavigateTimeoutRef.current = setTimeout(() => {
+        console.log('🏠 Automatically navigating to Home screen...');
+        
+        // Check if we're already on Home screen (shouldn't be, but just in case)
+        if (navigation.isFocused()) {
+          console.log('✅ Already on Home screen');
+          // Force a refresh if we're already on Home
+          navigation.replace('Home');
+        } else {
+          navigation.navigate('Home');
+        }
+      }, 3000);
 
     } catch (error) {
+      // REVERT optimistic update on error
+      setUserBalance(oldBalance);
+      setIsTransactionSuccess(false);
+      
       console.error('❌ Transaction error:', error);
       
       let errorMessage = error.message || 'Failed to complete transaction. Please try again.';
       
       // User-friendly error messages
-      if (error.message.includes('Insufficient funds')) {
+      if (error.message.includes('Insufficient funds') || error.message.includes('balance')) {
         errorMessage = 'Insufficient balance for this transaction.';
       } else if (error.message.includes('not found')) {
         errorMessage = 'Recipient account not found. Please check the phone number.';
@@ -538,6 +721,17 @@ const MyChangeXScreen = () => {
   // Get balance status for display
   const balanceStatus = getBalanceStatus();
 
+  // Handle modal close with additional logic
+  const handleMessageModalClose = () => {
+    setMessageModal({ ...messageModal, visible: false });
+    
+    // If transaction was successful and modal is closing, consider auto-navigating
+    if (isTransactionSuccess && !navigation.isFocused()) {
+      console.log('✅ Transaction successful, checking if should auto-navigate...');
+      // You could add immediate navigation here if user closes modal early
+    }
+  };
+
   return (
     <LinearGradient
       colors={['#0136c0', '#0136c0']}
@@ -549,7 +743,20 @@ const MyChangeXScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.container}>
             {/* Header */}
-            <Text style={styles.header}>Send Digital Coupon</Text>
+            <Text style={styles.header}>Send Change Coupon</Text>
+            
+            {/* Change Coupon Info */}
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>
+                💡 Send small change amounts (less than $1.00) to other MyChangeX users
+              </Text>
+              <Text style={[styles.infoText, { fontSize: 12, marginTop: 8 }]}>
+                🔔 Both you and the recipient will receive push notifications
+              </Text>
+              <Text style={[styles.infoText, { fontSize: 12, marginTop: 4 }]}>
+                🏠 Auto-navigates to Home after successful transaction
+              </Text>
+            </View>
 
             {/* Balance Display */}
             <View style={styles.balanceContainer}>
@@ -580,27 +787,28 @@ const MyChangeXScreen = () => {
 
             {/* Amount Input */}
             <View style={styles.amountContainer}>
-              <Text style={styles.label}>Enter Amount</Text>
+              <Text style={styles.label}>Enter Change Amount (max $0.99)</Text>
               <View style={[
                 styles.amountInputContainer,
-                exceedsBalance() && styles.amountInputContainerError
+                (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputContainerError
               ]}>
                 <Text style={[
                   styles.currencySymbol,
-                  exceedsBalance() && styles.currencySymbolError
+                  (exceedsBalance() || !isWithinChangeLimit()) && styles.currencySymbolError
                 ]}>$</Text>
                 <TextInput
                   style={[
                     styles.amountInput,
-                    exceedsBalance() && styles.amountInputError
+                    (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputError
                   ]}
                   placeholder="0.00"
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="numeric"
+                  onChangeText={handleAmountChange}
+                  keyboardType="decimal-pad"
                   selectionColor="#ffffff"
                   returnKeyType="done"
+                  maxLength={4}
                 />
               </View>
               
@@ -630,7 +838,7 @@ const MyChangeXScreen = () => {
                 end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.scanButtonText}>
-                  {phoneNumber ? 'Change Recipient' : 'Send Coupon'}
+                  {phoneNumber ? 'Change Recipient' : 'Select Recipient'}
                 </Text>
               </LinearGradient>
             </Pressable>
@@ -787,7 +995,7 @@ const MyChangeXScreen = () => {
           visible={messageModal.visible}
           title={messageModal.title}
           message={messageModal.message}
-          onClose={() => setMessageModal({ ...messageModal, visible: false })}
+          onClose={handleMessageModalClose}
         />
 
       </SafeAreaView>
@@ -796,6 +1004,20 @@ const MyChangeXScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // ... (ALL YOUR EXISTING STYLES REMAIN THE SAME)
+  infoContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  infoText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',

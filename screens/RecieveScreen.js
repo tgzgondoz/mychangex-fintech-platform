@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useEffect, useCallback } from 'react';
+import React, { useState, useLayoutEffect, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -18,6 +18,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
 import { 
   supabase, 
   formatZimbabwePhone, 
@@ -26,6 +27,7 @@ import {
   validatePhoneNumber,
   getUserTransactions
 } from './supabase';
+import { NotificationService } from './services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -150,6 +152,8 @@ const ReceiveScreen = () => {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [processingReceivedTransaction, setProcessingReceivedTransaction] = useState(false);
+  const [hasShownAutoNavigateAlert, setHasShownAutoNavigateAlert] = useState(false);
 
   // Message modal state
   const [messageModal, setMessageModal] = useState({
@@ -161,13 +165,28 @@ const ReceiveScreen = () => {
 
   // Real-time subscriptions
   const [subscriptions, setSubscriptions] = useState([]);
+  
+  // Timeout refs
+  const autoNavigateTimeoutRef = useRef(null);
+  const notificationSubscriptionRef = useRef(null);
 
-  // Cleanup subscriptions
+  // Cleanup subscriptions and timeouts
   useEffect(() => {
     return () => {
+      // Cleanup subscriptions
       subscriptions.forEach(subscription => {
         subscription?.unsubscribe?.();
       });
+      
+      // Cleanup notification listener
+      if (notificationSubscriptionRef.current) {
+        notificationSubscriptionRef.current.remove();
+      }
+      
+      // Cleanup timeouts
+      if (autoNavigateTimeoutRef.current) {
+        clearTimeout(autoNavigateTimeoutRef.current);
+      }
     };
   }, [subscriptions]);
 
@@ -179,6 +198,87 @@ const ReceiveScreen = () => {
       }
     }, [isFocused])
   );
+
+  // Setup notification listener for this screen
+  useEffect(() => {
+    if (!userId) return;
+    
+    console.log('🔔 Setting up notification listener for ReceiveScreen...');
+    
+    notificationSubscriptionRef.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('📱 ReceiveScreen: Notification received:', notification);
+      
+      const { data } = notification.request.content;
+      
+      if (data.type === 'transaction_received') {
+        console.log('💰 ReceiveScreen: Money received notification');
+        
+        // Refresh balance immediately
+        refreshBalance();
+        
+        // Show auto-navigation alert if not already shown
+        if (!hasShownAutoNavigateAlert && isFocused) {
+          setHasShownAutoNavigateAlert(true);
+          
+          Alert.alert(
+            "Money Received! 🎉",
+            `You've received $${data.amount || '0.00'}. Auto-navigating to Home in 5 seconds...`,
+            [
+              { 
+                text: "Go to Home Now", 
+                onPress: () => {
+                  console.log('🏠 Navigating to Home from notification alert');
+                  navigation.navigate('Home');
+                  setHasShownAutoNavigateAlert(false);
+                }
+              },
+              { 
+                text: "Stay Here", 
+                style: "cancel",
+                onPress: () => {
+                  console.log('✅ Staying on Receive screen');
+                  setHasShownAutoNavigateAlert(false);
+                  
+                  // Still auto-navigate after longer delay
+                  scheduleAutoNavigation(10000); // 10 seconds
+                }
+              }
+            ]
+          );
+          
+          // Schedule auto-navigation after 5 seconds
+          scheduleAutoNavigation(5000);
+        }
+      }
+    });
+    
+    return () => {
+      if (notificationSubscriptionRef.current) {
+        notificationSubscriptionRef.current.remove();
+      }
+    };
+  }, [userId, isFocused, hasShownAutoNavigateAlert, navigation]);
+
+  // Schedule auto-navigation function
+  const scheduleAutoNavigation = useCallback((delay = 5000) => {
+    console.log(`⏳ Scheduling auto-navigation to Home in ${delay}ms...`);
+    
+    // Clear any existing timeout
+    if (autoNavigateTimeoutRef.current) {
+      clearTimeout(autoNavigateTimeoutRef.current);
+    }
+    
+    // Set new timeout
+    autoNavigateTimeoutRef.current = setTimeout(() => {
+      console.log('🏠 Auto-navigating to Home from ReceiveScreen...');
+      
+      if (navigation.isFocused()) {
+        navigation.navigate('Home');
+      } else {
+        console.log('⚠️ Not on Receive screen, skipping auto-navigation');
+      }
+    }, delay);
+  }, [navigation]);
 
   const checkAuthentication = async () => {
     try {
@@ -270,7 +370,7 @@ const ReceiveScreen = () => {
     }
   };
 
-  // Setup real-time subscriptions
+  // Setup real-time subscriptions with auto-navigation
   const setupRealtimeSubscriptions = (userId) => {
     console.log('🔔 Setting up real-time subscriptions for user:', userId);
     
@@ -289,11 +389,23 @@ const ReceiveScreen = () => {
           console.log('🔄 Balance updated:', payload.new.balance);
           setBalance(payload.new.balance || 0);
           updateQRCodeBalance(payload.new.balance || 0);
+          
+          // Show notification for balance increase
+          if (payload.new.balance > balance) {
+            const increase = payload.new.balance - balance;
+            if (increase > 0.01) {
+              Alert.alert(
+                "Balance Increased",
+                `Your balance increased by $${increase.toFixed(2)}`,
+                [{ text: "OK" }]
+              );
+            }
+          }
         }
       )
       .subscribe();
 
-    // Transactions subscription
+    // Transactions subscription - UPDATED WITH AUTO-NAVIGATION
     const transactionSubscription = supabase
       .channel('user_transaction_changes')
       .on(
@@ -306,14 +418,71 @@ const ReceiveScreen = () => {
         },
         async (payload) => {
           console.log('💰 New incoming transaction:', payload.new);
-          await loadRecentTransactions(userId);
           
-          if (payload.new.amount > 0) {
-            showMessage(
-              'Funds Received!', 
-              `You received $${payload.new.amount.toFixed(2)} via MyChangeX.`,
-              'success'
-            );
+          // Prevent multiple triggers
+          if (processingReceivedTransaction) {
+            console.log('⚠️ Already processing a received transaction, skipping...');
+            return;
+          }
+          
+          setProcessingReceivedTransaction(true);
+          
+          try {
+            await loadRecentTransactions(userId);
+            
+            if (payload.new.amount > 0) {
+              console.log('🎉 Showing money received alert with auto-navigation');
+              
+              // Show success message with auto-navigation option
+              Alert.alert(
+                "Money Received! 🎉", 
+                `You received $${payload.new.amount.toFixed(2)}. Auto-navigating to Home in 5 seconds...`,
+                [
+                  { 
+                    text: "Go to Home Now", 
+                    onPress: () => {
+                      console.log('🏠 Navigating to Home immediately');
+                      navigation.navigate('Home');
+                    }
+                  },
+                  { 
+                    text: "Stay Here", 
+                    style: "cancel",
+                    onPress: () => {
+                      console.log('✅ Staying on Receive screen');
+                      // Still auto-navigate after longer delay
+                      scheduleAutoNavigation(10000);
+                    }
+                  }
+                ]
+              );
+              
+              // Schedule auto-navigation after 5 seconds
+              scheduleAutoNavigation(5000);
+              
+              // Send local notification
+              try {
+                await NotificationService.scheduleTransactionNotification(
+                  "💰 Money Received!",
+                  `You received $${parseFloat(payload.new.amount).toFixed(2)}`,
+                  {
+                    type: "transaction_received",
+                    amount: payload.new.amount,
+                    transaction_id: payload.new.id,
+                    screen: "Notifications",
+                  }
+                );
+              } catch (notificationError) {
+                console.error("Notification error:", notificationError);
+              }
+            }
+          } catch (error) {
+            console.error("Error processing received transaction:", error);
+          } finally {
+            // Reset the flag after a delay to prevent rapid triggers
+            setTimeout(() => {
+              setProcessingReceivedTransaction(false);
+            }, 3000);
           }
         }
       )
@@ -479,10 +648,33 @@ const ReceiveScreen = () => {
     setShowRegistrationModal(true);
   };
 
+  // Refresh balance function
+  const refreshBalance = async () => {
+    try {
+      if (!userId) return;
+      
+      console.log('🔄 Refreshing balance for user:', userId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', userId)
+        .single();
+      
+      if (!error && data) {
+        setBalance(data.balance || 0);
+        console.log('✅ Balance refreshed:', data.balance);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing balance:', error);
+    }
+  };
+
   // Pull to refresh
   const onRefresh = useCallback(async () => {
     if (!userId) return;
     
+    console.log('👆 Manual refresh triggered');
     setRefreshing(true);
     await fetchUserData(userId, false);
   }, [userId]);
@@ -584,6 +776,7 @@ const ReceiveScreen = () => {
               onRefresh={onRefresh}
               tintColor="#ffffff"
               colors={['#ffffff']}
+              title="Refreshing..."
             />
           }
           showsVerticalScrollIndicator={false}
@@ -597,9 +790,11 @@ const ReceiveScreen = () => {
                 onPress={onRefresh}
                 disabled={refreshing}
               >
-                <Text style={styles.refreshButtonText}>
-                  {refreshing ? 'Refreshing...' : 'Refresh'}
-                </Text>
+                {refreshing ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.refreshButtonText}>Refresh</Text>
+                )}
               </Pressable>
             </View>
             
@@ -619,6 +814,13 @@ const ReceiveScreen = () => {
                   </View>
                   <Text style={styles.userInfo}>{userData.name} • {formatDisplayPhone(userData.phoneNumber)}</Text>
                   <Text style={styles.qrHint}>Hold this code to the scanner</Text>
+                  
+                  {/* Auto-navigation info */}
+                  <View style={styles.autoNavigateInfo}>
+                    <Text style={styles.autoNavigateText}>
+                      💰 Auto-navigates to Home when you receive money
+                    </Text>
+                  </View>
                   
                   {/* Edit Button */}
                   <Pressable 
@@ -661,6 +863,12 @@ const ReceiveScreen = () => {
             <View style={styles.balanceContainer}>
               <Text style={styles.balanceLabel}>YOUR COUPON BALANCE</Text>
               <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
+              {processingReceivedTransaction && (
+                <View style={styles.refreshIndicator}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text style={styles.refreshIndicatorText}>Updating...</Text>
+                </View>
+              )}
             </View>
 
             {/* Recent Transactions */}
@@ -718,6 +926,17 @@ const ReceiveScreen = () => {
                 >
                   <Text style={styles.sendButtonText}>SEND COUPONS</Text>
                 </LinearGradient>
+              </Pressable>
+
+              {/* Go to Home Button */}
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.homeButton,
+                  pressed && styles.homeButtonPressed
+                ]}
+                onPress={() => navigation.navigate('Home')}
+              >
+                <Text style={styles.homeButtonText}>GO TO HOME</Text>
               </Pressable>
 
               {/* Transaction History Button */}
@@ -807,8 +1026,6 @@ const ReceiveScreen = () => {
   );
 };
 
-// ... (Keep all your existing styles, just add these new ones)
-
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -821,6 +1038,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
   },
   refreshButtonText: {
     color: '#ffffff',
@@ -953,6 +1172,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  autoNavigateInfo: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  autoNavigateText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   editButton: {
     backgroundColor: 'rgba(1, 54, 192, 0.1)',
     paddingHorizontal: 20,
@@ -1009,6 +1242,17 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  refreshIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  refreshIndicatorText: {
+    color: '#ffffff',
+    fontSize: 12,
+    marginLeft: 8,
+    opacity: 0.8,
   },
   transactionsContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -1098,6 +1342,20 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  homeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  homeButtonPressed: {
+    opacity: 0.8,
+  },
+  homeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '600',
   },
   historyButton: {

@@ -3,6 +3,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import {
   SafeAreaView,
@@ -20,6 +21,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import {
   supabase,
@@ -30,86 +32,244 @@ import {
   getUserTransactions,
 } from "./supabase";
 import SpendCard from "./SpendCard";
+import { NotificationService } from "./services/notificationService";
+import { useIsFocused } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get("window");
 
-// --- Constants ---
 const PRIMARY_BLUE = "#0136c0";
 const LIGHT_TEXT = "#ffffff";
 const CARD_COLOR = "rgba(255, 255, 255, 0.15)";
 const ACTION_ICON_COLOR = PRIMARY_BLUE;
 
-// Simple Icon component replacement (using text/emojis)
+// Import platform images
+const ecocashLogo = require("../assets/ecocash-logo.png");
+const omariLogo = require("../assets/omari.png");
+const mychangexLogo = require("../assets/logo.png");
+
 const Icon = ({ name, size = 24, color = LIGHT_TEXT, style = {} }) => (
   <Text style={[{ fontSize: size, color }, style]}>{name}</Text>
 );
 
-/**
- * Custom Background Placeholder
- * Replaces 'expo-linear-gradient' and handles the background styling.
- */
 const CustomBackground = ({ children, style }) => (
   <View style={[style, { backgroundColor: PRIMARY_BLUE }]}>{children}</View>
 );
 
-const HomeScreen = ({ navigation, route }) => {
+const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, lastTransaction, setHomeRefreshTrigger }) => {
   const [isSendModalVisible, setIsSendModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(unreadCount);
   const buttonScale = useState(new Animated.Value(1))[0];
+  
+  // Track if we're currently processing a received transaction
+  const [processingReceivedTransaction, setProcessingReceivedTransaction] = useState(false);
+  
+  // Track last balance for comparison
+  const [previousBalance, setPreviousBalance] = useState(0);
+  
+  // Track if we've shown the auto-refresh notification
+  const [hasShownRefreshNotification, setHasShownRefreshNotification] = useState(false);
+  
+  // Navigation focus tracker
+  const isFocused = useIsFocused();
+  
+  // Refs for cleanup
+  const subscriptionsRef = useRef([]);
+  const balanceUpdateTimeoutRef = useRef(null);
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setUnreadNotificationsCount(unreadCount);
+  }, [unreadCount]);
+
+  // Handle refresh triggers from App.js
+  useEffect(() => {
+    if (homeRefreshTrigger > 0) {
+      console.log('🔄 HomeScreen: Refresh trigger received from App:', homeRefreshTrigger);
+      
+      // Refresh balance and data immediately
+      handleAutoRefresh();
+      
+      // Transaction notifications are now handled through the notification system only
+      // No modal popups shown on home screen
+    }
+  }, [homeRefreshTrigger, lastTransaction, isFocused]);
+
+  // Auto-refresh when screen comes into focus
+  useEffect(() => {
+    if (isFocused) {
+      console.log('🏠 HomeScreen is focused, refreshing data...');
+      // Small delay to ensure smooth transition
+      setTimeout(() => {
+        refreshBalance();
+        if (userData?.id) {
+          loadUnreadNotificationsCount(userData.id);
+        }
+      }, 300);
+    }
+  }, [isFocused, userData?.id]);
 
   useLayoutEffect(() => {
-    // Load user data when component mounts
     loadUserData();
   }, []);
 
-  // Load user data from session (PIN-based auth)
+  // Initialize push notifications for this user
+  useEffect(() => {
+    const initializePushNotifications = async () => {
+      if (userData?.id) {
+        try {
+          const token = await NotificationService.registerForPushNotifications();
+          if (token) {
+            await NotificationService.savePushToken(userData.id, token);
+          }
+        } catch (error) {
+          console.error("Push notification initialization error:", error);
+        }
+      }
+    };
+
+    initializePushNotifications();
+  }, [userData?.id]);
+
+  // REAL-TIME BALANCE SUBSCRIPTION
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    console.log('🔔 Setting up real-time balance subscription in HomeScreen...');
+
+    const balanceSubscription = supabase
+      .channel("home_balance_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${userData.id}`,
+        },
+        (payload) => {
+          console.log('💰 HomeScreen: Balance updated in real-time:', payload.new.balance);
+          
+          const newBalance = payload.new.balance || 0;
+          const oldBalance = profileData?.balance || userData?.balance || 0;
+          
+          // Store previous balance for comparison
+          setPreviousBalance(oldBalance);
+          
+          // Update states
+          setProfileData((prevData) => ({
+            ...prevData,
+            balance: newBalance,
+          }));
+
+          setUserData((prevData) => ({
+            ...prevData,
+            balance: newBalance,
+          }));
+          
+          // Show notification if balance increased (money received)
+          if (newBalance > oldBalance && isFocused && !hasShownRefreshNotification) {
+            const difference = newBalance - oldBalance;
+            if (difference > 0.01) { // Only show for meaningful changes
+              setTimeout(() => {
+                Alert.alert(
+                  "💰 Balance Updated",
+                  `Your balance increased by $${difference.toFixed(2)}`,
+                  [{ text: "OK" }]
+                );
+                setHasShownRefreshNotification(true);
+                
+                // Reset after 5 seconds
+                setTimeout(() => setHasShownRefreshNotification(false), 5000);
+              }, 1000);
+            }
+          }
+        }
+      )
+      .subscribe();
+    
+    subscriptionsRef.current.push(balanceSubscription);
+
+    return () => {
+      console.log('🔕 Cleaning up HomeScreen balance subscription');
+      supabase.removeChannel(balanceSubscription);
+    };
+  }, [userData?.id, isFocused, hasShownRefreshNotification]);
+
+  // Handle auto-refresh when triggered
+  const handleAutoRefresh = useCallback(() => {
+    console.log('🔄 HomeScreen: Performing auto-refresh...');
+    
+    // Clear any existing timeout
+    if (balanceUpdateTimeoutRef.current) {
+      clearTimeout(balanceUpdateTimeoutRef.current);
+    }
+    
+    // Refresh with slight delay for better UX
+    balanceUpdateTimeoutRef.current = setTimeout(() => {
+      refreshBalance();
+      if (userData?.id) {
+        loadUnreadNotificationsCount(userData.id);
+      }
+      
+      // Show refresh indicator
+      setRefreshing(true);
+      setTimeout(() => setRefreshing(false), 1000);
+    }, 500);
+  }, [userData?.id]);
+
   const loadUserData = async () => {
     try {
       setLoading(true);
-      console.log("🔍 Loading user data from session...");
 
-      // Get user from session storage (PIN-based auth)
       const sessionResult = await getUserSession();
 
       if (!sessionResult.success || !sessionResult.user) {
-        console.error("❌ No user session found:", sessionResult.error);
-        Alert.alert("Session Expired", "Please login again.");
-        // Navigate to login screen
-        navigation.navigate("Login");
+        Alert.alert(
+          "Session Expired",
+          "Your session has expired. Please login again.",
+          [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+        );
         return;
       }
 
-      console.log("✅ User session found:", sessionResult.user);
       setUserData(sessionResult.user);
 
-      // Get user profile data using phone number from session
       const { data: profile, error: profileError } =
         await getUserProfileByPhone(sessionResult.user.phone);
 
       if (profileError) {
-        console.error("❌ Error fetching profile:", profileError);
-        // Use session data as fallback
+        console.error("Error fetching profile:", profileError);
         setProfileData(sessionResult.user);
+        setPreviousBalance(sessionResult.user.balance || 0);
       } else {
-        console.log("✅ User profile loaded:", profile);
         setProfileData(profile);
+        setPreviousBalance(profile.balance || 0);
       }
 
-      // Load unread notifications count
-      await loadUnreadNotificationsCount(sessionResult.user.id);
-      
+      // Load notifications count only if we have a valid user ID
+      if (sessionResult.user?.id) {
+        await loadUnreadNotificationsCount(sessionResult.user.id);
+      }
+
     } catch (error) {
-      console.error("❌ Error loading user data:", error);
-      // Try to use session data as fallback
+      console.error("Error loading user data:", error);
+
+      Alert.alert(
+        "Connection Error",
+        "Unable to load your data. Please check your internet connection and try again.",
+        [
+          { text: "Try Again", onPress: () => loadUserData() },
+          { text: "Logout", onPress: () => handleLogout() },
+        ]
+      );
+
       if (userData) {
         setProfileData(userData);
-      } else {
-        Alert.alert("Error", "Failed to load user data. Please login again.");
-        navigation.navigate("Login");
+        setPreviousBalance(userData.balance || 0);
       }
     } finally {
       setLoading(false);
@@ -117,120 +277,246 @@ const HomeScreen = ({ navigation, route }) => {
     }
   };
 
-  // Function to load unread notifications count
+  // FIXED: Updated loadUnreadNotificationsCount function
   const loadUnreadNotificationsCount = async (userId) => {
     try {
-      console.log('🔔 Loading unread notifications count...');
+      // First check if userId is valid
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('❌ Invalid userId provided:', userId);
+        return;
+      }
       
-      // Get user transactions to calculate unread notifications
+      console.log('📊 Loading transactions for user:', userId);
+      
       const transactionsResult = await getUserTransactions(userId, 50);
       
       if (transactionsResult.success) {
-        const transactions = transactionsResult.data || [];
+        console.log(`✅ Loaded ${transactionsResult.data?.length || 0} transactions`);
         
-        // Calculate unread count (notifications from last 7 days)
+        // If no transactions, that's fine
+        if (!transactionsResult.data || transactionsResult.data.length === 0) {
+          console.log('ℹ️ No transactions found for user');
+          return;
+        }
+        
+        // Calculate unread count (optional logic)
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
-        // Count transactions from last 7 days as "unread" notifications
-        const recentTransactions = transactions.filter(transaction => 
-          new Date(transaction.created_at) > sevenDaysAgo
+        const recentTransactions = transactionsResult.data.filter(
+          (transaction) => new Date(transaction.created_at) > sevenDaysAgo
         );
         
-        // Add some system notifications for demo (remove in production)
-        const systemNotificationsCount = Math.min(2, Math.floor(recentTransactions.length / 3));
+        console.log(`📅 Found ${recentTransactions.length} recent transactions`);
         
-        const totalUnreadCount = recentTransactions.length + systemNotificationsCount;
+        // You can implement logic here to count unread notifications
+        // For example: const unreadCount = recentTransactions.filter(t => !t.read).length;
+        // setUnreadNotificationsCount(unreadCount);
         
-        console.log(`✅ Unread notifications count: ${totalUnreadCount}`);
-        setUnreadNotificationsCount(totalUnreadCount);
       } else {
-        console.log('❌ Could not load transactions for notifications count');
-        setUnreadNotificationsCount(0);
+        console.log('❌ Error loading transactions:', transactionsResult.error);
+        
+        // Don't crash the app if transactions fail to load
+        // Just log the error and continue
+        if (transactionsResult.error?.includes('Invalid user ID')) {
+          console.log('⚠️ User ID validation issue, skipping transactions load');
+        }
       }
-      
     } catch (error) {
       console.error('❌ Error loading notifications count:', error);
-      setUnreadNotificationsCount(0);
     }
   };
 
-  // Real-time subscription for new transactions
+  // Enhanced real-time subscription for new transactions
   useEffect(() => {
     if (!userData?.id) return;
 
-    console.log('🔔 Setting up real-time transaction subscriptions...');
+    console.log('🔔 Setting up transaction subscriptions in HomeScreen...');
 
-    // Subscribe to new incoming transactions
     const incomingSubscription = supabase
-      .channel('incoming_transactions')
+      .channel("incoming_transactions")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'transactions',
-          filter: `receiver_id=eq.${userData.id}`
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `receiver_id=eq.${userData.id}`,
         },
-        (payload) => {
-          console.log('💰 New incoming transaction:', payload.new);
-          // Increment notification count for received money
-          setUnreadNotificationsCount(prev => {
-            const newCount = prev + 1;
-            console.log(`📈 Notification count updated to: ${newCount}`);
-            return newCount;
-          });
+        async (payload) => {
+          console.log('💰 HomeScreen: New incoming transaction received via real-time:', payload.new);
+          
+          // Prevent multiple triggers
+          if (processingReceivedTransaction) {
+            console.log('⚠️ Already processing a received transaction, skipping...');
+            return;
+          }
+          
+          setProcessingReceivedTransaction(true);
+          
+          try {
+            await refreshBalance();
+
+            try {
+              // Schedule local notification only
+              await NotificationService.scheduleTransactionNotification(
+                "💰 Money Received!",
+                `You received $${parseFloat(payload.new.amount).toFixed(2)}`,
+                {
+                  type: "transaction_received",
+                  amount: payload.new.amount,
+                  transaction_id: payload.new.id,
+                  screen: "Notifications",
+                }
+              );
+
+              // Check if we're on Home screen
+              if (isFocused) {
+                console.log('✅ Transaction received, notification scheduled');
+                // No modal popup shown - users will see the notification
+              } else {
+                console.log('🏠 User is on another screen, transaction handled by notification system');
+              }
+
+            } catch (notificationError) {
+              console.error("Notification error:", notificationError);
+            }
+
+          } catch (error) {
+            console.error("Error processing received transaction:", error);
+          } finally {
+            // Reset the flag after a delay to prevent rapid triggers
+            setTimeout(() => {
+              setProcessingReceivedTransaction(false);
+            }, 3000);
+          }
         }
       )
       .subscribe();
 
-    // Subscribe to new outgoing transactions
     const outgoingSubscription = supabase
-      .channel('outgoing_transactions')
+      .channel("outgoing_transactions")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'transactions',
-          filter: `sender_id=eq.${userData.id}`
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `sender_id=eq.${userData.id}`,
         },
-        (payload) => {
-          console.log('💰 New outgoing transaction:', payload.new);
-          // Increment notification count for sent money
-          setUnreadNotificationsCount(prev => {
-            const newCount = prev + 1;
-            console.log(`📈 Notification count updated to: ${newCount}`);
-            return newCount;
-          });
+        async (payload) => {
+          console.log('💸 HomeScreen: Outgoing transaction sent via real-time:', payload.new);
+          
+          await refreshBalance();
+
+          try {
+            await NotificationService.scheduleTransactionNotification(
+              "💰 Money Sent!",
+              `You sent $${parseFloat(payload.new.amount).toFixed(2)}`,
+              {
+                type: "transaction_sent",
+                amount: payload.new.amount,
+                transaction_id: payload.new.id,
+                screen: "Notifications",
+              }
+            );
+
+            if (isFocused) {
+              console.log('✅ Transaction sent, notification scheduled');
+              // No modal popup shown
+            }
+
+          } catch (error) {
+            console.error("Notification error:", error);
+          }
         }
       )
       .subscribe();
 
-    // Cleanup subscriptions
-    return () => {
-      console.log('🔕 Cleaning up transaction subscriptions');
-      incomingSubscription.unsubscribe();
-      outgoingSubscription.unsubscribe();
-    };
-  }, [userData?.id]);
+    subscriptionsRef.current.push(incomingSubscription, outgoingSubscription);
 
-  // Handle refresh from other screens
+    return () => {
+      console.log('🔕 Cleaning up HomeScreen transaction subscriptions');
+      supabase.removeChannel(incomingSubscription);
+      supabase.removeChannel(outgoingSubscription);
+    };
+  }, [userData?.id, navigation, processingReceivedTransaction, isFocused]);
+
+  const refreshBalance = async () => {
+    try {
+      if (!userData?.phone) return;
+
+      console.log('🔄 Refreshing balance for user:', userData.phone);
+      
+      const { data: profile, error } = await getUserProfileByPhone(
+        userData.phone
+      );
+
+      if (!error && profile) {
+        const oldBalance = profileData?.balance || userData?.balance || 0;
+        const newBalance = profile.balance || 0;
+        
+        setProfileData((prevData) => ({
+          ...prevData,
+          balance: newBalance,
+        }));
+
+        setUserData((prevData) => ({
+          ...prevData,
+          balance: newBalance,
+        }));
+        
+        console.log(`✅ Balance refreshed: $${oldBalance.toFixed(2)} → $${newBalance.toFixed(2)}`);
+        
+        return newBalance;
+      } else if (error) {
+        console.error('❌ Error refreshing balance:', error);
+      }
+    } catch (error) {
+      console.error("Error refreshing balance:", error);
+    }
+    return null;
+  };
+
+  // Cleanup on unmount
   useEffect(() => {
-    if (route.params?.refreshNotifications) {
-      console.log('🔄 Refreshing notifications from params...');
-      loadUnreadNotificationsCount(userData?.id);
-      // Clear the param
+    return () => {
+      // Clear timeout
+      if (balanceUpdateTimeoutRef.current) {
+        clearTimeout(balanceUpdateTimeoutRef.current);
+      }
+      
+      // Unsubscribe from all channels
+      subscriptionsRef.current.forEach(subscription => {
+        if (subscription) {
+          supabase.removeChannel(subscription);
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (route.params?.refreshNotifications && userData?.id) {
+      loadUnreadNotificationsCount(userData.id);
       navigation.setParams({ refreshNotifications: undefined });
     }
-  }, [route.params?.refreshNotifications, userData?.id]);
+
+    if (route.params?.refreshBalance) {
+      refreshBalance();
+      navigation.setParams({ refreshBalance: undefined });
+    }
+  }, [
+    route.params?.refreshNotifications,
+    route.params?.refreshBalance,
+    userData?.id,
+  ]);
 
   const onRefresh = useCallback(() => {
+    console.log('👆 Manual refresh triggered');
     setRefreshing(true);
     loadUserData();
   }, []);
 
-  // Button feedback animations
   const handlePressIn = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 0.96,
@@ -252,54 +538,50 @@ const HomeScreen = ({ navigation, route }) => {
 
   const handleLogout = async () => {
     try {
-      console.log("🚪 Logging out...");
       const { error } = await signOut();
 
       if (error) {
-        console.error("❌ Logout error:", error);
-        Alert.alert("Error", "Failed to logout. Please try again.");
+        Alert.alert("Logout Failed", "Unable to logout. Please try again.", [
+          { text: "OK" },
+        ]);
         return;
       }
 
-      console.log("✅ Logout successful");
-      // Navigate to login screen
       navigation.navigate("Login");
     } catch (error) {
-      console.error("❌ Logout error:", error);
-      Alert.alert("Error", "Failed to logout. Please try again.");
+      Alert.alert(
+        "Logout Error",
+        "An unexpected error occurred. Please try again.",
+        [{ text: "OK" }]
+      );
     }
   };
 
-  // Handle Receive button press
   const handleReceive = () => {
-    console.log("📱 Navigating to Receive page");
     navigation.navigate("Recieve");
   };
 
-  // Handle platform selection for sending money
   const handlePlatformSelect = (platform) => {
     closeSendModal();
-    console.log(`Selected platform: ${platform}`);
 
-    switch (platform) {
-      case "ecocash":
-        navigation.navigate("Econet");
-        break;
-      case "omari":
-        navigation.navigate("Omari");
-        break;
-      case "mychangex":
-        navigation.navigate("MyChangeX");
-        break;
-      default:
-        console.log("Unknown platform:", platform);
-    }
+    setTimeout(() => {
+      switch (platform) {
+        case "ecocash":
+          navigation.navigate("Econet");
+          break;
+        case "omari":
+          navigation.navigate("Omari");
+          break;
+        case "mychangex":
+          navigation.navigate("MyChangeX");
+          break;
+        default:
+          console.log("Unknown platform:", platform);
+      }
+    }, 100);
   };
 
-  // Handle service selection from SpendCard
   const handleServiceSelect = (service) => {
-    console.log(`Service selected: ${service.name}`);
-    // You can add navigation logic for different services here
     Alert.alert(
       "Service Selected",
       `You selected: ${service.name}\n\nThis feature will be implemented soon!`,
@@ -307,26 +589,18 @@ const HomeScreen = ({ navigation, route }) => {
     );
   };
 
-  // Format phone number for display
   const formatDisplayPhone = (phone) => {
     if (!phone) return "";
-
-    // Remove any existing formatting and keep only digits
     const cleaned = phone.replace(/\D/g, "");
-
-    // Format as +263 XX XXX XXXX
     if (cleaned.startsWith("263") && cleaned.length === 12) {
       return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(
         5,
         8
       )} ${cleaned.slice(8, 12)}`;
     }
-
-    // Return original if format doesn't match expected
     return phone;
   };
 
-  // Check authentication on focus
   useEffect(() => {
     const checkAuth = async () => {
       const authResult = await isAuthenticated();
@@ -339,29 +613,27 @@ const HomeScreen = ({ navigation, route }) => {
     return unsubscribe;
   }, [navigation]);
 
-  // --- UI Components ---
-
   const HeaderBar = () => {
     const handleNotificationPress = () => {
-      console.log('📱 Navigating to Notifications screen');
-      navigation.navigate('Notifications');
+      navigation.navigate("Notifications");
     };
 
     return (
       <View style={styles.header}>
         <Text style={styles.headerTitle}>MyChangeX</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.notificationButton}
             onPress={handleNotificationPress}
           >
             <View style={styles.notificationBadgeContainer}>
               <Icon name="🔔" size={20} />
-              {/* Only show badge if there are unread notifications */}
               {unreadNotificationsCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
-                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    {unreadNotificationsCount > 9
+                      ? "9+"
+                      : unreadNotificationsCount}
                   </Text>
                 </View>
               )}
@@ -374,13 +646,19 @@ const HomeScreen = ({ navigation, route }) => {
 
   const ProfileCard = () => {
     const handleProfilePress = () => {
-      console.log('📱 Navigating to Profile screen');
-      navigation.navigate('Profile');
+      navigation.navigate("Profile");
+    };
+
+    const getFirstInitial = (name) => {
+      if (!name) return "U";
+      const trimmedName = name.trim();
+      if (trimmedName.length === 0) return "U";
+      return trimmedName.charAt(0).toUpperCase();
     };
 
     if (loading && !refreshing) {
       return (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.card}
           onPress={handleProfilePress}
           activeOpacity={0.8}
@@ -403,14 +681,14 @@ const HomeScreen = ({ navigation, route }) => {
 
     if (!profileData && !userData) {
       return (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.card}
           onPress={handleProfilePress}
           activeOpacity={0.8}
         >
           <View style={styles.profileContainer}>
             <View style={styles.profileIconCircle}>
-              <Icon name="❌" size={28} color={PRIMARY_BLUE} />
+              <Text style={styles.profileInitial}>U</Text>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileUsername}>No Profile Data</Text>
@@ -426,18 +704,18 @@ const HomeScreen = ({ navigation, route }) => {
       );
     }
 
-    // Use profileData if available, otherwise use userData from session
     const displayData = profileData || userData;
+    const userInitial = getFirstInitial(displayData.full_name);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.card}
         onPress={handleProfilePress}
         activeOpacity={0.8}
       >
         <View style={styles.profileContainer}>
           <View style={styles.profileIconCircle}>
-            <Icon name="👤" size={28} color={PRIMARY_BLUE} />
+            <Text style={styles.profileInitial}>{userInitial}</Text>
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileUsername}>
@@ -456,9 +734,13 @@ const HomeScreen = ({ navigation, route }) => {
   };
 
   const BalanceCard = () => {
-    // Use profileData if available, otherwise use userData from session
     const displayData = profileData || userData;
     const balance = displayData?.balance || 0;
+    
+    // Calculate balance change for animation/display
+    const balanceChange = previousBalance ? balance - previousBalance : 0;
+    const showIncrease = balanceChange > 0.01;
+    const showDecrease = balanceChange < -0.01;
 
     return (
       <View style={[styles.card, styles.balanceCard]}>
@@ -466,9 +748,37 @@ const HomeScreen = ({ navigation, route }) => {
         <Text style={styles.balanceAmount}>
           ${parseFloat(balance).toFixed(2)}
         </Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadUserData}>
-          <Icon name="🔄" size={14} color={LIGHT_TEXT} />
-          <Text style={styles.refreshText}>Refresh</Text>
+        
+        {/* Balance change indicator */}
+        {(showIncrease || showDecrease) && (
+          <View style={[
+            styles.balanceChangeIndicator,
+            showIncrease ? styles.balanceIncrease : styles.balanceDecrease
+          ]}>
+            <Icon 
+              name={showIncrease ? "📈" : "📉"} 
+              size={12} 
+              color={LIGHT_TEXT} 
+            />
+            <Text style={styles.balanceChangeText}>
+              {showIncrease ? '+' : ''}{balanceChange.toFixed(2)}
+            </Text>
+          </View>
+        )}
+        
+        <TouchableOpacity 
+          style={styles.refreshButton} 
+          onPress={onRefresh}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <ActivityIndicator size="small" color={LIGHT_TEXT} />
+          ) : (
+            <>
+              <Icon name="🔄" size={14} color={LIGHT_TEXT} />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     );
@@ -478,7 +788,6 @@ const HomeScreen = ({ navigation, route }) => {
     <View style={styles.quickActionsWrapper}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsContainer}>
-        {/* Send Button */}
         <TouchableOpacity
           style={styles.actionItem}
           activeOpacity={0.8}
@@ -489,7 +798,6 @@ const HomeScreen = ({ navigation, route }) => {
           </View>
           <Text style={styles.actionText}>Send</Text>
         </TouchableOpacity>
-        {/* Receive Button */}
         <TouchableOpacity
           style={styles.actionItem}
           activeOpacity={0.8}
@@ -515,7 +823,6 @@ const HomeScreen = ({ navigation, route }) => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Select Platform</Text>
 
-          {/* EcoCash Option */}
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -523,8 +830,17 @@ const HomeScreen = ({ navigation, route }) => {
             ]}
             onPress={() => handlePlatformSelect("ecocash")}
           >
-            <View style={styles.platformIconContainer}>
-              <Icon name="📱" size={24} color="#00A859" />
+            <View
+              style={[
+                styles.platformIconContainer,
+                { backgroundColor: "rgba(0, 168, 89, 0.1)" },
+              ]}
+            >
+              <Image
+                source={ecocashLogo}
+                style={styles.platformImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.platformInfo}>
               <Text style={styles.platformName}>EcoCash</Text>
@@ -535,7 +851,6 @@ const HomeScreen = ({ navigation, route }) => {
             <Icon name="➡️" size={16} color="#666" />
           </Pressable>
 
-          {/* Omari Option */}
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -543,8 +858,17 @@ const HomeScreen = ({ navigation, route }) => {
             ]}
             onPress={() => handlePlatformSelect("omari")}
           >
-            <View style={styles.platformIconContainer}>
-              <Icon name="💳" size={24} color="#FF6B35" />
+            <View
+              style={[
+                styles.platformIconContainer,
+                { backgroundColor: "rgba(255, 107, 53, 0.1)" },
+              ]}
+            >
+              <Image
+                source={omariLogo}
+                style={styles.platformImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.platformInfo}>
               <Text style={styles.platformName}>Omari</Text>
@@ -555,7 +879,6 @@ const HomeScreen = ({ navigation, route }) => {
             <Icon name="➡️" size={16} color="#666" />
           </Pressable>
 
-          {/* MyChangeX Option */}
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -563,8 +886,21 @@ const HomeScreen = ({ navigation, route }) => {
             ]}
             onPress={() => handlePlatformSelect("mychangex")}
           >
-            <View style={styles.platformIconContainer}>
-              <Icon name="🔄" size={24} color={PRIMARY_BLUE} />
+            <View
+              style={[
+                styles.platformIconContainer,
+                {
+                  backgroundColor: "#0136c0",
+                  borderWidth: 1,
+                  borderColor: "rgba(1, 54, 192, 0.3)",
+                },
+              ]}
+            >
+              <Image
+                source={mychangexLogo}
+                style={[styles.platformImage, styles.mychangexLogo]}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.platformInfo}>
               <Text style={styles.platformName}>MyChangeX</Text>
@@ -604,6 +940,7 @@ const HomeScreen = ({ navigation, route }) => {
               onRefresh={onRefresh}
               tintColor={LIGHT_TEXT}
               colors={[LIGHT_TEXT]}
+              title="Refreshing balance..."
             />
           }
         >
@@ -611,18 +948,17 @@ const HomeScreen = ({ navigation, route }) => {
             <ProfileCard />
             <BalanceCard />
             <QuickActions />
-            
-            {/* Using the separated SpendCard component */}
-            <SpendCard 
+
+            <SpendCard
               buttonScale={buttonScale}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
               onServiceSelect={handleServiceSelect}
               userBalance={profileData?.balance || userData?.balance || 0}
-              navigation={navigation} 
+              navigation={navigation}
+              buttonText="Smart Invest" // Updated to fintech-related text
             />
-            
-            {/* Final section shown in the image */}
+
             <Text style={styles.otherServicesText}>Other Services</Text>
           </View>
         </ScrollView>
@@ -648,8 +984,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-
-  // --- Header Styling (Corrected) ---
   header: {
     flexDirection: "row",
     justifyContent: "flex-start",
@@ -658,7 +992,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 10,
   },
-
   headerTitle: {
     color: LIGHT_TEXT,
     fontSize: 20,
@@ -695,16 +1028,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
   },
-
-  // --- Card General Styles ---
   card: {
     backgroundColor: CARD_COLOR,
     borderRadius: 15,
     padding: 18,
     marginBottom: 16,
   },
-
-  // --- Profile Card ---
   profileContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -718,6 +1047,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
+  },
+  profileInitial: {
+    color: PRIMARY_BLUE,
+    fontSize: 24,
+    fontWeight: "700",
   },
   profileInfo: {
     flex: 1,
@@ -735,8 +1069,6 @@ const styles = StyleSheet.create({
   chevronContainer: {
     marginLeft: 10,
   },
-
-  // --- Balance Card ---
   balanceCard: {
     alignItems: "center",
     paddingVertical: 30,
@@ -753,6 +1085,26 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: "800",
   },
+  balanceChangeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  balanceIncrease: {
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  balanceDecrease: {
+    backgroundColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  balanceChangeText: {
+    color: LIGHT_TEXT,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
   refreshButton: {
     position: "absolute",
     top: 10,
@@ -763,14 +1115,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 80,
+    justifyContent: 'center',
   },
   refreshText: {
     color: LIGHT_TEXT,
     fontSize: 12,
     marginLeft: 4,
   },
-
-  // --- Quick Actions ---
   quickActionsWrapper: {
     marginTop: 20,
     marginBottom: 20,
@@ -810,8 +1162,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-
-  // --- Other Services Footer ---
   otherServicesText: {
     color: LIGHT_TEXT,
     fontSize: 18,
@@ -819,8 +1169,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
   },
-
-  // --- Modal Styling ---
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -841,29 +1189,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
-  serviceItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginVertical: 4,
-  },
-  serviceIcon: {
-    fontSize: 24,
-    marginRight: 15,
-    width: 30,
-    textAlign: "center",
-  },
-  serviceText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333",
-  },
-
-  // --- Platform Selection Modal Styles ---
   platformItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -878,10 +1203,15 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "rgba(0, 168, 89, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
+    padding: 5,
+  },
+  platformImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
   },
   platformInfo: {
     flex: 1,

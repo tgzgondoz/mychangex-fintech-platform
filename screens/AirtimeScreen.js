@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,11 @@ const { width } = Dimensions.get('window');
 const PRIMARY_BLUE = "#0136c0";
 const LIGHT_TEXT = "#ffffff";
 const CARD_COLOR = "rgba(255, 255, 255, 0.15)";
+
+// Import your image assets - adjust the paths as needed
+const econetLogo = require('../assets/econet-wireless-logo.png');
+const netoneLogo = require('../assets/netone.png');
+const telecelLogo = require('../assets/telecel-zimbabwe-logo.png');
 
 const AirtimeScreen = () => {
   const navigation = useNavigation();
@@ -39,13 +45,13 @@ const AirtimeScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState('');
 
-  // Network providers data
+  // Network providers data - updated with actual images
   const networks = [
     {
       id: 'econet',
       name: 'Econet',
       color: '#FF6B35',
-      icon: '📱',
+      icon: econetLogo, // Use imported image
       description: 'Econet Wireless Zimbabwe',
       prefix: '077, 078',
       quickAmounts: [1, 2, 5, 10, 20, 50],
@@ -55,7 +61,7 @@ const AirtimeScreen = () => {
       id: 'netone',
       name: 'NetOne',
       color: '#4CAF50',
-      icon: '📶',
+      icon: netoneLogo, // Use imported image
       description: 'NetOne Cellular',
       prefix: '071',
       quickAmounts: [1, 2, 5, 10, 20, 50],
@@ -65,7 +71,7 @@ const AirtimeScreen = () => {
       id: 'telecel',
       name: 'Telecel',
       color: '#2196F3',
-      icon: '🔵',
+      icon: telecelLogo, // Use imported image
       description: 'Telecel Zimbabwe',
       prefix: '073',
       quickAmounts: [1, 2, 5, 10, 20, 50],
@@ -321,8 +327,15 @@ const AirtimeScreen = () => {
                     end={{ x: 1, y: 1 }}
                   >
                     <View style={styles.networkHeader}>
-                      <View style={styles.networkIconContainer}>
-                        <Text style={styles.networkIcon}>{network.icon}</Text>
+                      <View style={[
+                        styles.networkIconContainer,
+                        selectedNetwork?.id === network.id && styles.networkIconContainerSelected
+                      ]}>
+                        <Image 
+                          source={network.icon} 
+                          style={styles.networkImage}
+                          resizeMode="contain"
+                        />
                       </View>
                       <View style={styles.networkInfo}>
                         <Text style={[
@@ -638,9 +651,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    padding: 5, // Add padding for images
   },
-  networkIcon: {
-    fontSize: 20,
+  networkIconContainerSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  networkImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20, // Slightly less than container for padding effect
   },
   networkInfo: {
     flex: 1,

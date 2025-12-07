@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from "react";
+import React, { useLayoutEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -23,12 +23,13 @@ import {
   formatZimbabwePhone,
   testSupabaseConnection,
   validatePIN,
-} from "./supabase"; // Updated import path
+} from "./supabase";
 
 const { width, height } = Dimensions.get("window");
 
 const SignupScreen = () => {
   const navigation = useNavigation();
+  const isMounted = useRef(true);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -36,6 +37,7 @@ const SignupScreen = () => {
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dbConnected, setDbConnected] = useState(false);
+  const [error, setError] = useState(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -44,16 +46,23 @@ const SignupScreen = () => {
 
     // Test database connection on component mount
     testDatabaseConnection();
-  }, []);
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [navigation]);
 
   const testDatabaseConnection = async () => {
-    console.log("🔌 Testing Supabase connection for Signup...");
-    const connected = await testSupabaseConnection();
-    setDbConnected(connected);
-    if (connected) {
-      console.log("✅ Supabase connection successful");
-    } else {
-      console.log("❌ Supabase connection failed");
+    try {
+      const connected = await testSupabaseConnection();
+      if (isMounted.current) {
+        setDbConnected(connected);
+      }
+    } catch (error) {
+      console.error('Database connection test failed:', error);
+      if (isMounted.current) {
+        setDbConnected(false);
+      }
     }
   };
 
@@ -102,101 +111,110 @@ const SignupScreen = () => {
   };
 
   const validateForm = () => {
+    // Clear previous errors
+    setError(null);
+
     if (!fullName.trim() || fullName.trim().length < 2) {
-      Alert.alert("Error", "Full name must be at least 2 characters.");
-      return false;
-    }
-    const cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
-    if (!validatePhoneNumber(cleanedPhoneNumber)) {
-      Alert.alert(
-        "Invalid Phone Number",
-        "Please enter a valid Zimbabwe mobile number (e.g., 078 473 9341 or 263784739341)."
-      );
+      setError("Full name must be at least 2 characters.");
       return false;
     }
 
-    // Updated PIN validation using the new function
+    const cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
+    if (!validatePhoneNumber(cleanedPhoneNumber)) {
+      setError("Please enter a valid Zimbabwe mobile number (e.g., 078 473 9341).");
+      return false;
+    }
+
     if (!validatePIN(pin)) {
-      Alert.alert("Error", "Please enter a valid 4-digit PIN.");
+      setError("Please enter a valid 4-digit PIN.");
       return false;
     }
 
     if (!validatePIN(confirmPin)) {
-      Alert.alert("Error", "Please confirm your 4-digit PIN.");
+      setError("Please confirm your 4-digit PIN.");
       return false;
     }
 
     if (pin !== confirmPin) {
-      Alert.alert("Error", "PINs do not match. Please try again.");
+      setError("PINs do not match. Please try again.");
       return false;
     }
 
     const uniqueDigits = new Set(pin.split(""));
     if (uniqueDigits.size === 1) {
-      Alert.alert(
-        "Weak PIN",
-        "Please choose a PIN with different digits for better security."
-      );
+      setError("Please choose a PIN with different digits for better security.");
       return false;
     }
+
+    // Check for sequential numbers (1234, 4321)
+    const isSequential = () => {
+      const digits = pin.split('').map(Number);
+      let ascending = true;
+      let descending = true;
+      
+      for (let i = 1; i < digits.length; i++) {
+        if (digits[i] !== digits[i-1] + 1) ascending = false;
+        if (digits[i] !== digits[i-1] - 1) descending = false;
+      }
+      
+      return ascending || descending;
+    };
+
+    if (isSequential()) {
+      setError("Avoid sequential numbers (like 1234) for better security.");
+      return false;
+    }
+
     return true;
   };
 
   const handleSignup = async () => {
-    // Development bypass for testing
-    if (__DEV__ && (!phoneNumber || !pin || !fullName)) {
-      console.log("🚀 DEVELOPMENT MODE: Testing PIN signup flow");
-      Alert.alert("Test Mode", "Testing PIN-based signup (no OTP required)", [
-        { text: "Continue" },
-      ]);
+    // Prevent multiple signup attempts
+    if (loading) return;
 
-      // For testing, we'll simulate a successful signup
-      const testPhone = formatZimbabwePhone(phoneNumber || "771234567");
-      const testResult = await signUpWithPIN(
-        testPhone,
-        fullName || "Test User",
-        pin || "1234"
-      );
-
-      if (testResult.success) {
-        Alert.alert("Success", "Account created successfully! Please login.", [
-          { text: "OK", onPress: () => navigation.navigate("Login") },
-        ]);
-      } else {
-        Alert.alert("Error", testResult.error || "Failed to create account");
-      }
-      return;
-    }
-
-    // Production validation
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
       const formattedPhone = formatZimbabwePhone(cleanedPhoneNumber);
 
-      console.log("📝 Starting PIN-based signup process for:", formattedPhone);
-
-      // Test database connection first
-      if (!dbConnected) {
-        const connected = await testSupabaseConnection();
-        if (!connected) {
+      // Test database connection first with timeout
+      const connectionTimeout = setTimeout(() => {
+        if (isMounted.current) {
           Alert.alert(
-            "Database Error",
-            "Cannot connect to database. Please try again."
+            "Connection Timeout",
+            "Unable to connect to server. Please check your internet connection.",
+            [
+              { text: "Retry", onPress: () => handleSignup() },
+              { text: "Cancel", style: "cancel" }
+            ]
           );
           setLoading(false);
-          return;
         }
-        setDbConnected(true);
+      }, 10000);
+
+      try {
+        const connected = await testSupabaseConnection();
+        clearTimeout(connectionTimeout);
+        
+        if (!connected) {
+          throw new Error("Database connection failed");
+        }
+        
+        if (isMounted.current) {
+          setDbConnected(true);
+        }
+      } catch (connectionError) {
+        clearTimeout(connectionTimeout);
+        throw new Error("Database connection failed");
       }
 
-      // NEW: Direct PIN-based signup (no OTP)
-      console.log("🔐 Creating account with PIN...");
+      // PIN-based signup
       const signupResult = await signUpWithPIN(
         formattedPhone,
         fullName.trim(),
@@ -210,77 +228,101 @@ const SignupScreen = () => {
             "An account with this phone number already exists. Please log in instead.",
             [
               {
-                text: "Login Instead",
+                text: "Login",
                 onPress: () =>
                   navigation.navigate("Login", { phoneNumber: formattedPhone }),
               },
               { text: "OK", style: "cancel" },
             ]
           );
+        } else if (signupResult.error === "INVALID_PHONE") {
+          setError("Invalid phone number format.");
+        } else if (signupResult.error === "PIN_TOO_SIMPLE") {
+          setError("Please choose a more secure PIN.");
+        } else if (signupResult.error === "DATABASE_ERROR") {
+          Alert.alert(
+            "Server Error",
+            "Unable to create account. Please try again later.",
+            [{ text: "OK" }]
+          );
         } else {
           Alert.alert(
-            "Signup Error",
-            signupResult.error || "Failed to create account. Please try again."
+            "Signup Failed",
+            signupResult.error || "Unable to create account. Please try again."
           );
         }
         return;
       }
 
-      console.log("✅ Account created successfully");
-
-      // NEW: Redirect directly to login page after successful signup
+      // Success - navigate to login
       Alert.alert(
-        "Success!",
-        "Account created successfully! Please login with your phone number and PIN.",
+        "Account Created!",
+        "Your account has been created successfully. Please login with your phone number and PIN.",
         [
           {
             text: "Login Now",
             onPress: () => {
               navigation.navigate("Login", {
                 phoneNumber: formattedPhone,
-                prefillPhone: true,
               });
             },
           },
         ]
       );
+
     } catch (error) {
       console.error("Signup error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      
+      if (error.message === "Network request failed") {
+        Alert.alert(
+          "Network Error",
+          "Unable to connect to the server. Please check your internet connection.",
+          [
+            { text: "Retry", onPress: () => handleSignup() },
+            { text: "Cancel", style: "cancel" }
+          ]
+        );
+      } else if (error.message === "Database connection failed") {
+        Alert.alert(
+          "Server Unavailable",
+          "The server is currently unavailable. Please try again later.",
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          "Signup Error",
+          "An unexpected error occurred. Please try again."
+        );
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
-  const handlePinChange = (text) => setPin(text.replace(/[^0-9]/g, ""));
-  const handleConfirmPinChange = (text) =>
-    setConfirmPin(text.replace(/[^0-9]/g, ""));
-
-  const fillTestData = () => {
-    setFullName("Test User");
-    setPhoneNumber("771234567");
-    setPin("1234");
-    setConfirmPin("1234");
-    Alert.alert(
-      "Test Data Loaded",
-      'Sample data filled. Click "Create Account" to test PIN-based signup.',
-      [{ text: "OK" }]
-    );
+  const handlePinChange = (text) => {
+    const digitsOnly = text.replace(/[^0-9]/g, "");
+    if (digitsOnly.length <= 4) {
+      setPin(digitsOnly);
+    }
   };
 
-  const fillQuickTestData = () => {
-    // Quick test with minimal data (will trigger development bypass)
-    setFullName("T");
-    setPhoneNumber("7");
-    setPin("1");
-    setConfirmPin("1");
-    setTimeout(() => {
-      Alert.alert(
-        "Quick Test Ready",
-        'Minimal test data loaded. Click "Create Account" to test development bypass.',
-        [{ text: "OK" }]
-      );
-    }, 100);
+  const handleConfirmPinChange = (text) => {
+    const digitsOnly = text.replace(/[^0-9]/g, "");
+    if (digitsOnly.length <= 4) {
+      setConfirmPin(digitsOnly);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.nativeEvent.key === "Enter" || e.nativeEvent.key === "done") {
+      handleSignup();
+    }
+  };
+
+  const goToLogin = () => {
+    navigation.navigate("Login");
   };
 
   return (
@@ -305,6 +347,7 @@ const SignupScreen = () => {
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            bounces={false}
           >
             <View style={styles.contentContainer}>
               <View style={styles.logoContainer}>
@@ -324,19 +367,21 @@ const SignupScreen = () => {
                   ]}
                 >
                   <Text style={styles.dbStatusText}>
-                    {dbConnected ? "✅ DB CONNECTED" : "❌ DB OFFLINE"}
+                    {dbConnected ? "✓ CONNECTED" : "⚠ CONNECTING..."}
                   </Text>
                 </View>
-
-                <Text style={styles.testingText}>
-                  {dbConnected
-                    ? "🔐 READY FOR PIN AUTH"
-                    : "🔧 CHECKING DATABASE..."}
-                </Text>
               </View>
 
               <View style={styles.formContainer}>
-                {/* FORM FIELDS REMAIN EXACTLY THE SAME */}
+                {/* Error Message */}
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <MaterialIcons name="error" size={16} color="#FF6B6B" />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
+                {/* Full Name Input */}
                 <View style={styles.inputContainer}>
                   <MaterialIcons
                     name="person"
@@ -350,15 +395,18 @@ const SignupScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={fullName}
                     onChangeText={setFullName}
+                    onKeyPress={handleKeyPress}
                     autoCapitalize="words"
                     autoComplete="name"
                     textContentType="name"
                     autoCorrect={false}
                     returnKeyType="next"
                     maxLength={50}
+                    editable={!loading}
                   />
                 </View>
 
+                {/* Phone Number Input */}
                 <View style={styles.inputContainer}>
                   <MaterialIcons
                     name="phone"
@@ -372,14 +420,17 @@ const SignupScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={phoneNumber}
                     onChangeText={handlePhoneChange}
+                    onKeyPress={handleKeyPress}
                     keyboardType="phone-pad"
                     maxLength={16}
                     autoComplete="tel"
                     textContentType="telephoneNumber"
                     returnKeyType="next"
+                    editable={!loading}
                   />
                 </View>
 
+                {/* PIN Input */}
                 <View style={styles.inputContainer}>
                   <FontAwesome
                     name="lock"
@@ -393,17 +444,20 @@ const SignupScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={pin}
                     onChangeText={handlePinChange}
+                    onKeyPress={handleKeyPress}
                     secureTextEntry={!showPin}
                     keyboardType="numeric"
                     maxLength={4}
                     autoComplete="password"
                     textContentType="password"
                     returnKeyType="next"
+                    editable={!loading}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPin(!showPin)}
                     style={styles.visibilityToggle}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    disabled={loading}
                   >
                     <MaterialIcons
                       name={showPin ? "visibility-off" : "visibility"}
@@ -413,6 +467,7 @@ const SignupScreen = () => {
                   </TouchableOpacity>
                 </View>
 
+                {/* Confirm PIN Input */}
                 <View style={styles.inputContainer}>
                   <FontAwesome
                     name="lock"
@@ -426,6 +481,7 @@ const SignupScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={confirmPin}
                     onChangeText={handleConfirmPinChange}
+                    onKeyPress={handleKeyPress}
                     secureTextEntry={!showPin}
                     keyboardType="numeric"
                     maxLength={4}
@@ -433,9 +489,11 @@ const SignupScreen = () => {
                     textContentType="password"
                     returnKeyType="done"
                     onSubmitEditing={handleSignup}
+                    editable={!loading}
                   />
                 </View>
 
+                {/* PIN Strength Indicator */}
                 {pin.length > 0 && (
                   <View style={styles.pinStrengthContainer}>
                     <MaterialIcons
@@ -453,14 +511,16 @@ const SignupScreen = () => {
                     />
                     <Text style={styles.pinStrengthText}>
                       {pin.length < 4
-                        ? `${4 - pin.length} more digits needed`
+                        ? `${4 - pin.length} digits remaining`
                         : new Set(pin.split("")).size === 1
-                          ? "Use different digits for better security"
-                          : "Good PIN strength"}
+                          ? "Use different digits"
+                          : "Good PIN"
+                      }
                     </Text>
                   </View>
                 )}
 
+                {/* PIN Match Indicator */}
                 {confirmPin.length > 0 && (
                   <View style={styles.pinMatchContainer}>
                     <MaterialIcons
@@ -489,41 +549,19 @@ const SignupScreen = () => {
                     >
                       {pin === confirmPin && pin.length === 4
                         ? "PINs match"
-                        : "PINs do not match"}
+                        : "PINs don't match"}
                     </Text>
                   </View>
                 )}
 
-                {/* Test Buttons Row - Only in development */}
-                {__DEV__ && (
-                  <View style={styles.testButtonsRow}>
-                    <TouchableOpacity
-                      style={styles.testButton}
-                      onPress={fillTestData}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.testButtonText}>
-                        🎯 Fill Test Data
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.testButton}
-                      onPress={fillQuickTestData}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.testButtonText}>⚡ Quick Test</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
+                {/* Signup Button */}
                 <TouchableOpacity
                   style={[
                     styles.signupButton,
                     loading && styles.buttonDisabled,
                   ]}
                   onPress={handleSignup}
-                  disabled={loading}
+                  disabled={loading || !dbConnected}
                   activeOpacity={0.8}
                 >
                   <LinearGradient
@@ -536,35 +574,30 @@ const SignupScreen = () => {
                       <ActivityIndicator color="#0136c0" size="small" />
                     ) : (
                       <Text style={styles.buttonText}>
-                        {dbConnected ? "🔐 Create Account" : "🔌 Connecting..."}
+                        {dbConnected ? "Create Account" : "Connecting..."}
                       </Text>
                     )}
                   </LinearGradient>
                 </TouchableOpacity>
 
+                {/* Login Link */}
                 <View style={styles.loginContainer}>
                   <Text style={styles.loginText}>
                     Already have an account?{" "}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate("Login")}
+                    onPress={goToLogin}
                     activeOpacity={0.7}
+                    disabled={loading}
                   >
                     <Text style={styles.loginLink}>Login</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* UPDATED: Auth Flow Info */}
-                <View style={styles.authInfoContainer}>
-                  <Text style={styles.authInfoTitle}>
-                    Authentication Flow:{" "}
-                    {dbConnected ? "PIN Auth ✅" : "Setup Required 🔧"}
-                  </Text>
-                  <Text style={styles.authInfoText}>
-                    • Enter details → Account creation → Redirect to login{"\n"}
-                    • 4-digit PIN for authentication{"\n"}• No SMS verification
-                    required{"\n"}
-                    {__DEV__ && "• Development: Test mode available"}
+                {/* Security Info */}
+                <View style={styles.securityInfoContainer}>
+                  <Text style={styles.securityInfoText}>
+                    🔒 Secure PIN authentication
                   </Text>
                 </View>
               </View>
@@ -602,73 +635,62 @@ const styles = StyleSheet.create({
     paddingBottom: height * 0.03,
   },
   logo: {
-    width: width * 0.3,
-    height: width * 0.3,
+    width: width * 0.25,
+    height: width * 0.25,
     marginBottom: 16,
   },
   welcomeText: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "700",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
     color: "#ffffff",
     marginBottom: 6,
-    textShadowColor: "rgba(0, 0, 0, 0.2)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    letterSpacing: 0.36,
-    includeFontPadding: false,
+    textAlign: "center",
   },
   subText: {
     fontSize: 16,
     color: "rgba(255,255,255,0.9)",
     fontWeight: "500",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-    includeFontPadding: false,
-    marginBottom: 8,
+    textAlign: "center",
+    marginBottom: 16,
   },
   dbStatus: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginBottom: 8,
   },
   dbConnected: {
     backgroundColor: "rgba(76, 175, 80, 0.2)",
-    borderColor: "#4CAF50",
-    borderWidth: 1,
   },
   dbDisconnected: {
-    backgroundColor: "rgba(244, 67, 54, 0.2)",
-    borderColor: "#F44336",
-    borderWidth: 1,
+    backgroundColor: "rgba(255, 193, 7, 0.2)",
   },
   dbStatusText: {
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "600",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    includeFontPadding: false,
-  },
-  testingText: {
-    fontSize: 14,
-    color: "#ffeb3b",
-    fontWeight: "600",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    textShadowColor: "rgba(0, 0, 0, 0.3)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    includeFontPadding: false,
-    marginTop: 4,
-    textAlign: "center",
   },
   formContainer: {
     paddingHorizontal: width * 0.08,
     width: "100%",
-    maxWidth: 500,
+    maxWidth: 400,
     alignSelf: "center",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 107, 107, 0.1)",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 107, 0.3)",
+  },
+  errorText: {
+    color: "#FF6B6B",
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
   inputContainer: {
     flexDirection: "row",
@@ -678,7 +700,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     height: 56,
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
   },
   inputIcon: {
@@ -690,9 +712,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "500",
-    letterSpacing: 0.5,
     paddingVertical: 0,
-    includeFontPadding: false,
   },
   visibilityToggle: {
     padding: 8,
@@ -720,28 +740,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: "500",
   },
-  testButtonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 10,
-  },
-  testButton: {
-    flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    alignItems: "center",
-  },
-  testButtonText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "500",
-    textAlign: "center",
-  },
   signupButton: {
     width: "100%",
     borderRadius: 10,
@@ -761,16 +759,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
   },
   buttonText: {
     color: "#0136c0",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "600",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    letterSpacing: 0.5,
-    includeFontPadding: false,
   },
   loginContainer: {
     flexDirection: "row",
@@ -780,37 +773,26 @@ const styles = StyleSheet.create({
   },
   loginText: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    includeFontPadding: false,
   },
   loginLink: {
     color: "#ffffff",
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: 14,
     textDecorationLine: "underline",
-    fontFamily: Platform.select({ ios: "System", android: "Roboto" }),
-    includeFontPadding: false,
   },
-  authInfoContainer: {
+  securityInfoContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 16,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  authInfoTitle: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  authInfoText: {
+  securityInfoText: {
     color: "rgba(255, 255, 255, 0.8)",
     fontSize: 12,
-    lineHeight: 16,
+    textAlign: "center",
   },
 });
 

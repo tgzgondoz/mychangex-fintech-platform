@@ -39,6 +39,17 @@ try {
 export { supabase };
 
 // =============================================================================
+// SECURITY CONFIGURATION
+// =============================================================================
+
+/**
+ * Get PIN hashing secret key (use environment variable in production)
+ */
+const getSecretKey = () => {
+  return process.env.PIN_HASH_SECRET || 'mychangex-pin-secret-key-2024-change-in-production';
+};
+
+// =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
 
@@ -92,7 +103,7 @@ export const hashPIN = (pin) => {
       throw new Error('Invalid PIN input');
     }
     
-    const secretKey = 'your-secret-key-change-in-production';
+    const secretKey = getSecretKey();
     return CryptoJS.HmacSHA256(pin, secretKey).toString();
   } catch (error) {
     console.error('❌ Error hashing PIN:', error);
@@ -245,6 +256,216 @@ export const debugDatabaseStatus = async () => {
     console.error('❌ Debug failed:', error);
     return { error: error.message };
   }
+};
+
+// =============================================================================
+// AUTH SESSION MANAGEMENT
+// =============================================================================
+
+/**
+ * Ensure authenticated session before database operations
+ */
+export const ensureAuthenticatedSession = async () => {
+  try {
+    console.log('🔐 Ensuring authenticated session...');
+    
+    // Check current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('❌ Session check error:', sessionError);
+      return { success: false, error: sessionError };
+    }
+    
+    if (session) {
+      console.log('✅ Active session found');
+      return { success: true, session, user: session.user };
+    }
+    
+    // Try to get user directly
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('❌ User check error:', userError);
+      return { success: false, error: userError };
+    }
+    
+    if (user) {
+      console.log('✅ Authenticated user found');
+      return { success: true, user };
+    }
+    
+    console.log('❌ No authenticated session or user found');
+    return { success: false, error: 'No authenticated session' };
+    
+  } catch (error) {
+    console.error('❌ Ensure auth session error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Get current auth state with detailed info
+ */
+export const getAuthState = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const localSession = await getUserSession();
+    
+    return {
+      supabase: {
+        hasSession: !!session,
+        hasUser: !!user,
+        userId: user?.id,
+        email: user?.email
+      },
+      local: {
+        hasSession: !!localSession.user,
+        user: localSession.user
+      },
+      isConsistent: session?.user?.id === localSession.user?.id
+    };
+  } catch (error) {
+    console.error('❌ Get auth state error:', error);
+    return { error: error.message };
+  }
+};
+
+// =============================================================================
+// RLS POLICY DEBUGGING
+// =============================================================================
+
+/**
+ * Check RLS policies for user_push_tokens table
+ */
+export const checkRLSPolicies = async () => {
+  try {
+    console.log('🔐 Checking RLS policies for user_push_tokens...');
+    
+    // Try to insert a test record to see if RLS is blocking
+    const testData = {
+      user_id: '00000000-0000-0000-0000-000000000000', // dummy ID
+      expo_push_token: 'test-token-' + Date.now(),
+      created_at: new Date().toISOString()
+    };
+    
+    const { error } = await supabase
+      .from('user_push_tokens')
+      .insert(testData);
+    
+    if (error?.code === '42501') {
+      console.log('❌ RLS Policy is blocking inserts');
+      return {
+        hasRLS: true,
+        canInsert: false,
+        error: error.message
+      };
+    }
+    
+    // Clean up test data if it succeeded (RLS might be disabled)
+    if (!error) {
+      await supabase
+        .from('user_push_tokens')
+        .delete()
+        .eq('expo_push_token', testData.expo_push_token);
+      
+      console.log('⚠️ RLS might be disabled - test insert succeeded');
+      return {
+        hasRLS: false,
+        canInsert: true
+      };
+    }
+    
+    return {
+      hasRLS: true,
+      canInsert: true,
+      error: error?.message
+    };
+    
+  } catch (error) {
+    console.error('❌ RLS check error:', error);
+    return {
+      hasRLS: null,
+      canInsert: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Test authenticated insert for push tokens
+ */
+export const testPushTokenInsert = async (userId) => {
+  try {
+    console.log('🧪 Testing push token insert for user:', userId);
+    
+    const testToken = 'test-token-' + Date.now();
+    
+    const { data, error } = await supabase
+      .from('user_push_tokens')
+      .insert({
+        user_id: userId,
+        expo_push_token: testToken,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+    
+    if (error) {
+      console.log('❌ Push token insert test failed:', error);
+      return {
+        success: false,
+        error: error,
+        code: error.code
+      };
+    }
+    
+    // Clean up test data
+    await supabase
+      .from('user_push_tokens')
+      .delete()
+      .eq('id', data[0].id);
+    
+    console.log('✅ Push token insert test successful');
+    return {
+      success: true,
+      data: data
+    };
+    
+  } catch (error) {
+    console.error('❌ Push token test error:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Debug the push token RLS issue
+ */
+export const debugPushTokenIssue = async () => {
+  console.log('🐛 Debugging push token RLS issue...');
+  
+  const authState = await getAuthState();
+  console.log('🔐 Auth State:', authState);
+  
+  const rlsCheck = await checkRLSPolicies();
+  console.log('🔐 RLS Check:', rlsCheck);
+  
+  let insertTest = null;
+  if (authState.supabase.hasUser) {
+    insertTest = await testPushTokenInsert(authState.supabase.userId);
+    console.log('🧪 Insert Test:', insertTest);
+  }
+  
+  return {
+    authState,
+    rlsCheck,
+    insertTest
+  };
 };
 
 // =============================================================================
@@ -1270,7 +1491,7 @@ export const debugSignupProcess = async (phoneNumber, fullName, pin) => {
     console.log('3. 🔍 Checking if user exists...');
     const { data: userData, error: userError } = await supabase
       .from('profiles')
-            .select('*')
+      .select('*')
       .eq('phone', formattedPhone)
       .maybeSingle();
 
@@ -1432,4 +1653,4 @@ export const getDatabaseSchema = async () => {
   }
 };
 
-export default supabase;
+export default supabase; 

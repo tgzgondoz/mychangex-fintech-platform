@@ -25,7 +25,8 @@ import {
   signOut,
   formatZimbabwePhone,
   validatePIN,
-  hashPIN
+  hashPIN,
+  isAuthenticated // Import isAuthenticated
 } from './supabase';
 
 const { width } = Dimensions.get('window');
@@ -57,9 +58,21 @@ const ProfileScreen = () => {
   const [updatingPIN, setUpdatingPIN] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Authentication check
   useEffect(() => {
-    loadUserData();
-  }, []);
+    const checkAuth = async () => {
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        console.log('🔒 ProfileScreen: User not authenticated, redirecting to Login');
+        navigation.navigate('Login');
+        return;
+      }
+      // If authenticated, load user data
+      loadUserData();
+    };
+    
+    checkAuth();
+  }, [navigation]);
 
   const loadUserData = async () => {
     try {
@@ -88,6 +101,12 @@ const ProfileScreen = () => {
     } catch (error) {
       console.error('❌ Error loading profile data:', error);
       Alert.alert('Error', 'Failed to load profile data.');
+      
+      // If there's an error, check if user is still authenticated
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        navigation.navigate('Login');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,6 +125,14 @@ const ProfileScreen = () => {
 
     setUpdatingName(true);
     try {
+      // Check authentication before proceeding
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        Alert.alert('Session Expired', 'Please login again.');
+        navigation.navigate('Login');
+        return;
+      }
+
       // Simulate API call to update name
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -144,6 +171,14 @@ const ProfileScreen = () => {
 
     setUpdatingPIN(true);
     try {
+      // Check authentication before proceeding
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        Alert.alert('Session Expired', 'Please login again.');
+        navigation.navigate('Login');
+        return;
+      }
+
       // Simulate PIN verification and update
       await new Promise(resolve => setTimeout(resolve, 2000));
       
@@ -164,12 +199,26 @@ const ProfileScreen = () => {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        // Already logged out, just navigate
+        navigation.navigate('Login');
+        return;
+      }
+
       await signOut();
       console.log('✅ Logout successful');
       navigation.navigate('Login');
     } catch (error) {
       console.error('❌ Logout error:', error);
-      Alert.alert('Error', 'Failed to logout. Please try again.');
+      
+      // If logout fails, still navigate to login
+      const authResult = await isAuthenticated();
+      if (!authResult.authenticated) {
+        navigation.navigate('Login');
+      } else {
+        Alert.alert('Error', 'Failed to logout. Please try again.');
+      }
     } finally {
       setLoggingOut(false);
     }

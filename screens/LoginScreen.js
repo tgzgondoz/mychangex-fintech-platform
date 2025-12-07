@@ -1,4 +1,3 @@
-
 import React, { useLayoutEffect, useState } from 'react';
 import { 
   View, 
@@ -21,12 +20,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { 
   loginWithPIN, 
-  checkUserExists, 
   testSupabaseConnection,
   formatZimbabwePhone,
   validatePIN,
   storeUserSession 
-} from './supabase'; // Updated import path
+} from './supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,16 +43,15 @@ const LoginScreen = () => {
     
     // Test database connection on component mount
     testDatabaseConnection();
-  }, []);
+  }, [navigation]);
 
   const testDatabaseConnection = async () => {
-    console.log('🔌 Testing Supabase connection...');
-    const connected = await testSupabaseConnection();
-    setDbConnected(connected);
-    if (connected) {
-      console.log('✅ Supabase connection successful');
-    } else {
-      console.log('❌ Supabase connection failed');
+    try {
+      const connected = await testSupabaseConnection();
+      setDbConnected(connected);
+    } catch (error) {
+      console.error('Database connection test failed:', error);
+      setDbConnected(false);
     }
   };
 
@@ -64,46 +61,22 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async () => {
-    // Development bypass for testing
-    if (__DEV__ && (!phoneNumber || !pin)) {
-      console.log('🚀 DEVELOPMENT MODE: Testing PIN login flow');
-      Alert.alert(
-        'Test Mode', 
-        'Testing PIN-based login',
-        [{ text: 'Continue' }]
-      );
-      
-      // For testing, we'll simulate a login
-      const testPhone = formatZimbabwePhone(phoneNumber || '771234567');
-      const testResult = await loginWithPIN(testPhone, pin || '1234');
-      
-      if (testResult.success) {
-        // Store user session and navigate to home
-        await storeUserSession(testResult.user);
-        Alert.alert(
-          'Success', 
-          'Login successful!',
-          [{ text: 'OK', onPress: () => navigation.navigate("Home") }]
-        );
-      } else {
-        Alert.alert('Error', testResult.error || 'Login failed');
-      }
-      return;
-    }
+    // Prevent multiple login attempts
+    if (loading) return;
 
-    // Production validation
+    // Validation
     if (!phoneNumber) {
       Alert.alert('Error', 'Please enter your phone number');
       return;
     }
 
     if (!validatePhoneInput(phoneNumber)) {
-      Alert.alert('Invalid Phone', 'Please enter a valid Zimbabwean phone number');
+      Alert.alert('Invalid Phone Number', 'Please enter a valid Zimbabwean phone number (9-12 digits)');
       return;
     }
 
     if (!validatePIN(pin)) {
-      Alert.alert('Error', 'Please enter a valid 4-digit PIN');
+      Alert.alert('Invalid PIN', 'Please enter a valid 4-digit PIN');
       return;
     }
 
@@ -113,27 +86,34 @@ const LoginScreen = () => {
       const cleanedPhoneNumber = phoneNumber.replace(/\D/g, '');
       const formattedPhone = formatZimbabwePhone(cleanedPhoneNumber);
 
-      console.log('🔐 Starting PIN login process for:', formattedPhone);
+      // Test database connection first with timeout
+      const connectionTimeout = setTimeout(() => {
+        Alert.alert('Connection Timeout', 'Unable to connect to server. Please check your internet connection.');
+        setLoading(false);
+      }, 10000);
 
-      // Test database connection first
-      if (!dbConnected) {
+      try {
         const connected = await testSupabaseConnection();
+        clearTimeout(connectionTimeout);
+        
         if (!connected) {
-          Alert.alert('Database Error', 'Cannot connect to database. Please try again.');
+          Alert.alert('Connection Error', 'Cannot connect to server. Please try again.');
           setLoading(false);
           return;
         }
         setDbConnected(true);
+      } catch (connectionError) {
+        clearTimeout(connectionTimeout);
+        throw new Error('Database connection failed');
       }
 
-      // NEW: Direct PIN-based login
-      console.log('🔑 Verifying PIN...');
+      // PIN-based login
       const loginResult = await loginWithPIN(formattedPhone, pin);
       
       if (!loginResult.success) {
         if (loginResult.error === 'USER_NOT_FOUND') {
           Alert.alert(
-            'User Not Found', 
+            'Account Not Found', 
             'No account found with this phone number. Please sign up first.',
             [
               { 
@@ -145,95 +125,85 @@ const LoginScreen = () => {
           );
         } else if (loginResult.error === 'INVALID_PIN') {
           Alert.alert(
-            'Invalid PIN', 
+            'Incorrect PIN', 
             'The PIN you entered is incorrect. Please try again.',
+            [{ text: 'OK' }]
+          );
+        } else if (loginResult.error === 'ACCOUNT_LOCKED') {
+          Alert.alert(
+            'Account Locked',
+            'Your account has been locked due to multiple failed attempts. Please contact support.',
             [{ text: 'OK' }]
           );
         } else {
           Alert.alert(
-            "Login Error",
-            loginResult.error || "Failed to login. Please try again."
+            "Login Failed",
+            loginResult.error || "Unable to login. Please try again."
           );
         }
         return;
       }
 
-      console.log('✅ Login successful');
-
-      // NEW: Store user session and navigate to home
+      // Store user session
       await storeUserSession(loginResult.user);
 
       // Success - navigate to home screen
-      Alert.alert(
-        "Welcome Back!",
-        `Login successful. Welcome back, ${loginResult.user.full_name}!`,
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Home' }],
-              });
-            }
-          }
-        ]
-      );
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
 
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      
+      if (error.message === 'Network request failed') {
+        Alert.alert(
+          'Network Error',
+          'Unable to connect to the server. Please check your internet connection and try again.',
+          [
+            { text: 'Retry', onPress: () => handleLogin() },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+      } else if (error.message === 'Database connection failed') {
+        Alert.alert(
+          'Server Unavailable',
+          'The server is currently unavailable. Please try again later.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          "Login Error",
+          "An unexpected error occurred. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignup = () => {
-    console.log('📝 Navigating to Signup');
     navigation.navigate('Signup', { phoneNumber });
   };
 
   const handleForgotPin = () => {
     Alert.alert(
-      'Reset PIN',
-      'To reset your PIN, please contact support or create a new account.',
+      'Forgot PIN',
+      'To reset your PIN, please contact customer support.',
       [
         {
-          text: 'Contact Support',
-          onPress: () => console.log('Contact support pressed')
-        },
-        {
-          text: 'Create New Account',
-          onPress: () => navigation.navigate('Signup')
-        },
-        { text: 'Cancel', style: 'cancel' }
+          text: 'OK',
+          onPress: () => console.log('Forgot PIN assistance')
+        }
       ]
     );
   };
 
-  const handlePinChange = (text) => setPin(text.replace(/[^0-9]/g, ""));
-
-  const fillTestData = () => {
-    setPhoneNumber('771234567');
-    setPin('1234');
-    Alert.alert(
-      'Test Data Loaded', 
-      'Sample login credentials filled. Click Login to test PIN authentication.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  const fillQuickTestData = () => {
-    // Quick test with minimal data (will trigger development bypass)
-    setPhoneNumber('7');
-    setPin('1');
-    setTimeout(() => {
-      Alert.alert(
-        'Quick Test Ready',
-        'Minimal test data loaded. Click "Login" to test development bypass.',
-        [{ text: 'OK' }]
-      );
-    }, 100);
+  const handlePinChange = (text) => {
+    const digitsOnly = text.replace(/[^0-9]/g, "");
+    if (digitsOnly.length <= 4) {
+      setPin(digitsOnly);
+    }
   };
 
   const formatPhoneDisplay = (text) => {
@@ -257,6 +227,12 @@ const LoginScreen = () => {
     setPhoneNumber(formatted);
   };
 
+  const handleKeyPress = (e) => {
+    if (e.nativeEvent.key === 'Enter' || e.nativeEvent.key === 'done') {
+      handleLogin();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
@@ -275,6 +251,7 @@ const LoginScreen = () => {
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            bounces={false}
           >
             {/* Centered Content */}
             <View style={styles.contentContainer}>
@@ -291,13 +268,9 @@ const LoginScreen = () => {
                 {/* Database Status */}
                 <View style={[styles.dbStatus, dbConnected ? styles.dbConnected : styles.dbDisconnected]}>
                   <Text style={styles.dbStatusText}>
-                    {dbConnected ? '✅ DB CONNECTED' : '❌ DB OFFLINE'}
+                    {dbConnected ? '✓ CONNECTED' : '⚠ CONNECTING...'}
                   </Text>
                 </View>
-                
-                <Text style={styles.testingText}>
-                  {dbConnected ? '🔐 READY FOR PIN AUTH' : '🔧 CHECKING DATABASE...'}
-                </Text>
               </View>
 
               {/* Form Section */}
@@ -315,15 +288,17 @@ const LoginScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={phoneNumber}
                     onChangeText={handlePhoneChange}
+                    onKeyPress={handleKeyPress}
                     keyboardType="phone-pad"
                     maxLength={12}
                     returnKeyType="next"
                     autoComplete="tel"
                     textContentType="telephoneNumber"
+                    editable={!loading}
                   />
                 </View>
 
-                {/* NEW: PIN Input Field */}
+                {/* PIN Input Field */}
                 <View style={styles.inputContainer}>
                   <FontAwesome
                     name="lock"
@@ -337,6 +312,7 @@ const LoginScreen = () => {
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     value={pin}
                     onChangeText={handlePinChange}
+                    onKeyPress={handleKeyPress}
                     secureTextEntry={!showPin}
                     keyboardType="numeric"
                     maxLength={4}
@@ -344,11 +320,13 @@ const LoginScreen = () => {
                     textContentType="password"
                     returnKeyType="done"
                     onSubmitEditing={handleLogin}
+                    editable={!loading}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPin(!showPin)}
                     style={styles.visibilityToggle}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    disabled={loading}
                   >
                     <MaterialIcons
                       name={showPin ? "visibility-off" : "visibility"}
@@ -356,13 +334,6 @@ const LoginScreen = () => {
                       color="rgba(255,255,255,0.8)"
                     />
                   </TouchableOpacity>
-                </View>
-
-                {/* UPDATED: Login Info */}
-                <View style={styles.loginInfoContainer}>
-                  <Text style={styles.loginInfoText}>
-                    Enter your phone number and 4-digit PIN to login
-                  </Text>
                 </View>
 
                 {/* PIN Strength Indicator */}
@@ -382,31 +353,11 @@ const LoginScreen = () => {
                   </View>
                 )}
 
-                {/* Test Buttons Row - Only in development */}
-                {__DEV__ && (
-                  <View style={styles.testButtonsRow}>
-                    <TouchableOpacity 
-                      style={styles.testButton}
-                      onPress={fillTestData}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.testButtonText}>🎯 Fill Test Data</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={styles.testButton}
-                      onPress={fillQuickTestData}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.testButtonText}>⚡ Quick Test</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
                 <TouchableOpacity 
                   style={styles.forgotPassword}
                   onPress={handleForgotPin}
                   activeOpacity={0.7}
+                  disabled={loading}
                 >
                   <Text style={styles.forgotPasswordText}>Forgot your PIN?</Text>
                 </TouchableOpacity>
@@ -415,7 +366,7 @@ const LoginScreen = () => {
                   style={[styles.loginButton, loading && styles.disabledButton]}
                   onPress={handleLogin}
                   activeOpacity={0.9}
-                  disabled={loading}
+                  disabled={loading || !dbConnected}
                 >
                   <LinearGradient
                     colors={['#fff', '#f8f9fa']}
@@ -427,7 +378,7 @@ const LoginScreen = () => {
                       <ActivityIndicator size="small" color="#0136c0" />
                     ) : (
                       <Text style={styles.buttonText}>
-                        {dbConnected ? '🔐 Login with PIN' : '🔌 Connecting...'}
+                        {dbConnected ? 'Login with PIN' : 'Connecting...'}
                       </Text>
                     )}
                   </LinearGradient>
@@ -438,21 +389,16 @@ const LoginScreen = () => {
                   <TouchableOpacity 
                     onPress={handleSignup}
                     activeOpacity={0.7}
+                    disabled={loading}
                   >
                     <Text style={styles.signupLink}>Sign Up</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* UPDATED: Auth Flow Info */}
-                <View style={styles.authInfoContainer}>
-                  <Text style={styles.authInfoTitle}>
-                    Login Flow: {dbConnected ? 'PIN Auth ✅' : 'Setup Required 🔧'}
-                  </Text>
-                  <Text style={styles.authInfoText}>
-                    • Enter phone + PIN → Direct login → Home screen{'\n'}
-                    • No SMS verification required{'\n'}
-                    • Secure PIN-based authentication{'\n'}
-                    {__DEV__ && '• Development: Test mode available'}
+                {/* Security Info */}
+                <View style={styles.securityInfoContainer}>
+                  <Text style={styles.securityInfoText}>
+                    🔒 Secure PIN authentication
                   </Text>
                 </View>
               </View>
@@ -490,72 +436,45 @@ const styles = StyleSheet.create({
     paddingBottom: height * 0.03,
   },
   logo: {
-    width: width * 0.3,
-    height: width * 0.3,
+    width: width * 0.25,
+    height: width * 0.25,
     marginBottom: 16,
   },
   welcomeText: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
     color: '#ffffff',
     marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    letterSpacing: 0.36,
-    includeFontPadding: false,
+    textAlign: 'center',
   },
   subText: {
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-    includeFontPadding: false,
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   dbStatus: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginBottom: 8,
   },
   dbConnected: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderColor: '#4CAF50',
-    borderWidth: 1,
   },
   dbDisconnected: {
-    backgroundColor: 'rgba(244, 67, 54, 0.2)',
-    borderColor: '#F44336',
-    borderWidth: 1,
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
   },
   dbStatusText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    includeFontPadding: false,
-  },
-  testingText: {
-    fontSize: 14,
-    color: '#ffeb3b',
-    fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    includeFontPadding: false,
-    marginTop: 4,
-    textAlign: 'center',
   },
   formContainer: {
     paddingHorizontal: width * 0.08,
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 400,
     alignSelf: 'center',
   },
   inputContainer: {
@@ -566,7 +485,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     height: 56,
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   inputIcon: {
@@ -578,26 +497,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
-    letterSpacing: 0.5,
     paddingVertical: 0,
-    includeFontPadding: false,
   },
   visibilityToggle: {
     padding: 8,
   },
-  loginInfoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  loginInfoText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  // NEW: PIN indicator styles
   pinIndicatorContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -610,41 +514,14 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: "500",
   },
-  testButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 10,
-  },
-  testButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
   forgotPassword: {
     alignItems: 'flex-end',
     marginBottom: 24,
   },
   forgotPasswordText: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-    includeFontPadding: false,
   },
   loginButton: {
     width: '100%',
@@ -664,16 +541,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
   },
   buttonText: {
     color: '#0136c0',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    letterSpacing: 0.5,
-    includeFontPadding: false,
   },
   signupContainer: {
     flexDirection: 'row',
@@ -683,37 +555,26 @@ const styles = StyleSheet.create({
   },
   signupText: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    includeFontPadding: false,
   },
   signupLink: {
     color: '#ffffff',
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 14,
     textDecorationLine: 'underline',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    includeFontPadding: false,
   },
-  authInfoContainer: {
+  securityInfoContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  authInfoTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  authInfoText: {
+  securityInfoText: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
-    lineHeight: 16,
+    textAlign: 'center',
   },
 });
 
