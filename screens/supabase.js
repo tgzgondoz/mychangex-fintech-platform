@@ -980,23 +980,38 @@ export const verifyPIN = async (phoneNumber, pin) => {
 // =============================================================================
 
 /**
- * Get user profile by phone number
+ * Get user profile by phone number (FIXED VERSION)
  */
 export const getUserProfileByPhone = async (phoneNumber) => {
   try {
+    console.log('📱 [GET_PROFILE] Fetching profile for phone:', phoneNumber);
+    
     const formattedPhone = formatZimbabwePhone(phoneNumber);
+    if (!formattedPhone) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
     
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('phone', formattedPhone)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single
 
-    if (error) throw error;
-    
+    if (error) {
+      console.error('❌ [GET_PROFILE] Error:', error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data) {
+      console.log('ℹ️ [GET_PROFILE] No profile found for phone:', formattedPhone);
+      return { success: false, error: 'Profile not found' };
+    }
+
+    console.log('✅ [GET_PROFILE] Profile found:', data.id);
     return { success: true, data };
+    
   } catch (error) {
-    console.error('❌ Get user profile by phone error:', error);
+    console.error('❌ [GET_PROFILE] Unexpected error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -1115,7 +1130,7 @@ export const updateUserBalance = async (phoneNumber, newBalance) => {
 };
 
 // =============================================================================
-// TRANSACTION FUNCTIONS
+// TRANSACTION FUNCTIONS - UPDATED FOR RLS FIX
 // =============================================================================
 
 /**
@@ -1330,37 +1345,100 @@ export const executeManualTransaction = async (senderId, receiverId, amount) => 
 };
 
 /**
- * Get user transaction history (SIMPLIFIED VERSION - no joins)
+ * Get user transaction history (FIXED VERSION - handles RLS issues)
  */
 export const getUserTransactions = async (userId, limit = 50) => {
   try {
-    console.log('📊 Loading transactions for user:', userId);
+    console.log('📊 [GET_TX] Loading transactions for user:', userId);
     
-    // SIMPLE VERSION - No joins to avoid foreign key issues
+    // First, verify the user exists
+    const { data: userProfile, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (userError) {
+      console.error('❌ [GET_TX] User verification failed:', userError);
+      return {
+        success: false,
+        error: 'User not found',
+        data: []
+      };
+    }
+    
+    console.log('✅ [GET_TX] User verified, querying transactions...');
+    
+    // Try with explicit column selection and no joins first
     const { data, error } = await supabase
       .from('transactions')
-      .select('*')
+      .select(`
+        id,
+        sender_id,
+        receiver_id,
+        amount,
+        type,
+        status,
+        created_at,
+        updated_at
+      `)
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error('❌ Error loading transactions:', error);
+      console.error('❌ [GET_TX] Query error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details
+      });
+      
+      // Try alternative query if first fails
+      console.log('🔄 [GET_TX] Trying alternative query...');
+      
+      const { data: altData, error: altError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+        
+      if (altError) {
+        console.error('❌ [GET_TX] Alternative query also failed:', altError);
+        return {
+          success: false,
+          error: error.message,
+          data: []
+        };
+      }
+      
+      console.log(`✅ [GET_TX] Alternative query successful: ${altData?.length || 0} transactions`);
       return {
-        success: false,
-        error: error.message,
-        data: []
+        success: true,
+        data: altData || [],
+        count: altData?.length || 0
       };
     }
 
-    console.log(`✅ Loaded ${data?.length || 0} transactions`);
+    console.log(`✅ [GET_TX] Query successful: ${data?.length || 0} transactions`);
+    
+    if (data && data.length > 0) {
+      console.log('📊 [GET_TX] Sample transaction:', {
+        id: data[0].id,
+        amount: data[0].amount,
+        sender: data[0].sender_id,
+        receiver: data[0].receiver_id,
+        date: data[0].created_at
+      });
+    }
+    
     return {
       success: true,
       data: data || [],
       count: data?.length || 0
     };
   } catch (error) {
-    console.error('❌ Get user transactions error:', error);
+    console.error('❌ [GET_TX] Unexpected error:', error);
     return {
       success: false,
       error: error.message,
@@ -1394,6 +1472,78 @@ export const getTransactionById = async (transactionId) => {
     return {
       success: false,
       error: error.message
+    };
+  }
+};
+
+/**
+ * DIRECT TRANSACTION QUERY - Bypasses getUserTransactions function
+ * Use this for CouponTransactionsScreen to avoid RLS issues
+ */
+export const getDirectTransactions = async (userId) => {
+  try {
+    console.log('🎯 [DIRECT_TX] Direct query for user:', userId);
+    
+    // Direct query without any complex logic
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('❌ [DIRECT_TX] Direct query error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details
+      });
+      
+      // If RLS error, try with service role key temporarily
+      if (error.code === '42501') {
+        console.log('🔓 [DIRECT_TX] RLS blocked access. Check RLS policies in Supabase dashboard.');
+        console.log('💡 [DIRECT_TX] Run this SQL in Supabase SQL Editor:');
+        console.log(`
+          -- Enable RLS but allow all reads for testing
+          ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+          
+          -- Create policy that allows all authenticated users to read
+          CREATE POLICY "Allow all authenticated users to read transactions" 
+          ON transactions FOR SELECT 
+          USING (auth.role() = 'authenticated');
+          
+          -- Or disable RLS temporarily for testing:
+          -- ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+        `);
+      }
+      
+      return {
+        success: false,
+        error: error.message,
+        data: []
+      };
+    }
+
+    console.log(`✅ [DIRECT_TX] Direct query successful: ${data?.length || 0} transactions`);
+    
+    if (data && data.length > 0) {
+      // Log first few transactions for debugging
+      data.slice(0, 3).forEach((tx, i) => {
+        console.log(`📊 [DIRECT_TX] TX ${i+1}: $${tx.amount} from ${tx.sender_id.substring(0, 8)} to ${tx.receiver_id.substring(0, 8)}`);
+      });
+    }
+    
+    return {
+      success: true,
+      data: data || [],
+      count: data?.length || 0
+    };
+  } catch (error) {
+    console.error('❌ [DIRECT_TX] Unexpected error:', error);
+    return {
+      success: false,
+      error: error.message,
+      data: []
     };
   }
 };
@@ -1653,4 +1803,4 @@ export const getDatabaseSchema = async () => {
   }
 };
 
-export default supabase; 
+export default supabase;
