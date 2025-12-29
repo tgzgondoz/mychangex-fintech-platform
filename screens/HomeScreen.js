@@ -38,8 +38,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
-
-// Updated Color Palette with new colors
 const PRIMARY_BLUE = "#0136c0";
 const ACCENT_BLUE = "#0136c0";
 const LIGHT_BLUE = "#0136c0";
@@ -50,8 +48,6 @@ const CARD_BG = "rgba(255, 255, 255, 0.08)";
 const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
 const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
-
-// Import platform images
 const ecocashLogo = require("../assets/ecocash-logo.png");
 const omariLogo = require("../assets/omari.png");
 const mychangexLogo = require("../assets/logo.png");
@@ -72,37 +68,25 @@ const HomeScreen = ({
   const [unreadNotificationsCount, setUnreadNotificationsCount] =
     useState(unreadCount);
   const [showBalance, setShowBalance] = useState(true);
-
   const buttonScale = useState(new Animated.Value(1))[0];
   const balanceOpacity = useRef(new Animated.Value(1)).current;
-
   const [processingReceivedTransaction, setProcessingReceivedTransaction] =
     useState(false);
   const [previousBalance, setPreviousBalance] = useState(0);
   const [hasShownRefreshNotification, setHasShownRefreshNotification] =
     useState(false);
-
   const isFocused = useIsFocused();
   const subscriptionsRef = useRef([]);
   const balanceUpdateTimeoutRef = useRef(null);
 
-  // Update local state when prop changes
   useEffect(() => {
     setUnreadNotificationsCount(unreadCount);
   }, [unreadCount]);
-
-  // Handle refresh triggers from App.js
   useEffect(() => {
     if (homeRefreshTrigger > 0) {
-      console.log(
-        "🔄 HomeScreen: Refresh trigger received from App:",
-        homeRefreshTrigger
-      );
       handleAutoRefresh();
     }
   }, [homeRefreshTrigger, lastTransaction, isFocused]);
-
-  // Auto-refresh when screen comes into focus
   useEffect(() => {
     if (isFocused) {
       setTimeout(() => {
@@ -113,12 +97,10 @@ const HomeScreen = ({
       }, 300);
     }
   }, [isFocused, userData?.id]);
-
   useLayoutEffect(() => {
     loadUserData();
   }, []);
 
-  // Toggle balance visibility with animation
   const toggleBalanceVisibility = () => {
     Animated.timing(balanceOpacity, {
       toValue: showBalance ? 0 : 1,
@@ -132,7 +114,6 @@ const HomeScreen = ({
     try {
       setLoading(true);
       const sessionResult = await getUserSession();
-
       if (!sessionResult.success || !sessionResult.user) {
         Alert.alert(
           "Session Expired",
@@ -141,12 +122,9 @@ const HomeScreen = ({
         );
         return;
       }
-
       setUserData(sessionResult.user);
-
       const { data: profile, error: profileError } =
         await getUserProfileByPhone(sessionResult.user.phone);
-
       if (profileError) {
         console.error("Error fetching profile:", profileError);
         setProfileData(sessionResult.user);
@@ -155,7 +133,6 @@ const HomeScreen = ({
         setProfileData(profile);
         setPreviousBalance(profile.balance || 0);
       }
-
       if (sessionResult.user?.id) {
         await loadUnreadNotificationsCount(sessionResult.user.id);
       }
@@ -169,7 +146,6 @@ const HomeScreen = ({
           { text: "Logout", onPress: () => handleLogout() },
         ]
       );
-
       if (userData) {
         setProfileData(userData);
         setPreviousBalance(userData.balance || 0);
@@ -186,9 +162,7 @@ const HomeScreen = ({
         console.error("❌ Invalid userId provided:", userId);
         return;
       }
-
       const transactionsResult = await getUserTransactions(userId, 50);
-
       if (transactionsResult.success) {
         console.log(
           `✅ Loaded ${transactionsResult.data?.length || 0} transactions`
@@ -204,31 +178,18 @@ const HomeScreen = ({
   const refreshBalance = async () => {
     try {
       if (!userData?.phone) return;
-
       console.log("🔄 Refreshing balance for user:", userData.phone);
-
       const { data: profile, error } = await getUserProfileByPhone(
         userData.phone
       );
-
       if (!error && profile) {
         const oldBalance = profileData?.balance || userData?.balance || 0;
         const newBalance = profile.balance || 0;
-
-        setProfileData((prevData) => ({
-          ...prevData,
-          balance: newBalance,
-        }));
-
-        setUserData((prevData) => ({
-          ...prevData,
-          balance: newBalance,
-        }));
-
+        setProfileData((prevData) => ({ ...prevData, balance: newBalance }));
+        setUserData((prevData) => ({ ...prevData, balance: newBalance }));
         console.log(
           `✅ Balance refreshed: $${oldBalance.toFixed(2)} → $${newBalance.toFixed(2)}`
         );
-
         return newBalance;
       } else if (error) {
         console.error("❌ Error refreshing balance:", error);
@@ -241,17 +202,14 @@ const HomeScreen = ({
 
   const handleAutoRefresh = useCallback(() => {
     console.log("🔄 HomeScreen: Performing auto-refresh...");
-
     if (balanceUpdateTimeoutRef.current) {
       clearTimeout(balanceUpdateTimeoutRef.current);
     }
-
     balanceUpdateTimeoutRef.current = setTimeout(() => {
       refreshBalance();
       if (userData?.id) {
         loadUnreadNotificationsCount(userData.id);
       }
-
       setRefreshing(true);
       setTimeout(() => setRefreshing(false), 1000);
     }, 500);
@@ -262,14 +220,12 @@ const HomeScreen = ({
     setRefreshing(true);
     loadUserData();
   }, []);
-
   const handlePressIn = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 0.96,
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
-
   const handlePressOut = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 1,
@@ -278,21 +234,18 @@ const HomeScreen = ({
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
-
   const openSendModal = () => setIsSendModalVisible(true);
   const closeSendModal = () => setIsSendModalVisible(false);
 
   const handleLogout = async () => {
     try {
       const { error } = await signOut();
-
       if (error) {
         Alert.alert("Logout Failed", "Unable to logout. Please try again.", [
           { text: "OK" },
         ]);
         return;
       }
-
       navigation.navigate("Login");
     } catch (error) {
       Alert.alert(
@@ -306,7 +259,6 @@ const HomeScreen = ({
   const handleReceive = () => {
     navigation.navigate("Recieve");
   };
-
   const handlePlatformSelect = (platform) => {
     closeSendModal();
     setTimeout(() => {
@@ -338,10 +290,7 @@ const HomeScreen = ({
     if (!phone) return "";
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.startsWith("263") && cleaned.length === 12) {
-      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(
-        5,
-        8
-      )} ${cleaned.slice(8, 12)}`;
+      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8, 12)}`;
     }
     return phone;
   };
@@ -353,18 +302,15 @@ const HomeScreen = ({
         navigation.navigate("Login");
       }
     };
-
     const unsubscribe = navigation.addListener("focus", checkAuth);
     return unsubscribe;
   }, [navigation]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (balanceUpdateTimeoutRef.current) {
         clearTimeout(balanceUpdateTimeoutRef.current);
       }
-
       subscriptionsRef.current.forEach((subscription) => {
         if (subscription) {
           supabase.removeChannel(subscription);
@@ -373,12 +319,10 @@ const HomeScreen = ({
     };
   }, []);
 
-  // Header Component
   const HeaderBar = () => {
     const handleNotificationPress = () => {
       navigation.navigate("Notifications");
     };
-
     return (
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -412,19 +356,16 @@ const HomeScreen = ({
     );
   };
 
-  // Profile Card Component
   const ProfileCard = () => {
     const handleProfilePress = () => {
       navigation.navigate("Profile");
     };
-
     const getFirstInitial = (name) => {
       if (!name) return "U";
       const trimmedName = name.trim();
       if (trimmedName.length === 0) return "U";
       return trimmedName.charAt(0).toUpperCase();
     };
-
     if (loading && !refreshing) {
       return (
         <TouchableOpacity
@@ -449,7 +390,6 @@ const HomeScreen = ({
         </TouchableOpacity>
       );
     }
-
     if (!profileData && !userData) {
       return (
         <TouchableOpacity
@@ -476,10 +416,8 @@ const HomeScreen = ({
         </TouchableOpacity>
       );
     }
-
     const displayData = profileData || userData;
     const userInitial = getFirstInitial(displayData.full_name);
-
     return (
       <TouchableOpacity
         style={styles.card}
@@ -513,14 +451,12 @@ const HomeScreen = ({
     );
   };
 
-  // Balance Card Component
   const BalanceCard = () => {
     const displayData = profileData || userData;
     const balance = displayData?.balance || 0;
     const balanceChange = previousBalance ? balance - previousBalance : 0;
     const showIncrease = balanceChange > 0.01;
     const showDecrease = balanceChange < -0.01;
-
     return (
       <View style={[styles.card, styles.balanceCard]}>
         <LinearGradient
@@ -529,7 +465,6 @@ const HomeScreen = ({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          {/* Balance Header with Eye Icon */}
           <View style={styles.balanceHeader}>
             <View style={styles.balanceLabelContainer}>
               <Ionicons
@@ -540,8 +475,8 @@ const HomeScreen = ({
               <Text style={styles.balanceLabel}>Total Balance</Text>
             </View>
             <TouchableOpacity
-              style={styles.eyeButton}
               onPress={toggleBalanceVisibility}
+              style={styles.eyeButton}
             >
               <Ionicons
                 name={showBalance ? "eye-outline" : "eye-off-outline"}
@@ -550,8 +485,6 @@ const HomeScreen = ({
               />
             </TouchableOpacity>
           </View>
-
-          {/* Main Balance Amount with Glow Effect */}
           <View style={styles.balanceAmountContainer}>
             <Animated.View
               style={[styles.balanceGlow, { opacity: balanceOpacity }]}
@@ -563,15 +496,19 @@ const HomeScreen = ({
                 end={{ x: 0.5, y: 1 }}
               />
             </Animated.View>
-            <Animated.View style={{ opacity: balanceOpacity }}>
+            <Animated.View
+              style={{
+                opacity: balanceOpacity,
+                flexDirection: "row",
+                alignItems: "baseline",
+              }}
+            >
               <Text style={styles.balanceAmount}>
                 ${showBalance ? parseFloat(balance).toFixed(2) : "•••••"}
               </Text>
-              <Text style={styles.balanceCurrency}>USD</Text>
+              <Text style={styles.balanceCurrency}> USD</Text>
             </Animated.View>
           </View>
-
-          {/* Balance Change Indicator */}
           {showBalance && (showIncrease || showDecrease) && (
             <View
               style={[
@@ -593,8 +530,6 @@ const HomeScreen = ({
               </Text>
             </View>
           )}
-
-          {/* Status Indicator */}
           <View style={styles.statusIndicator}>
             <View
               style={[
@@ -606,8 +541,6 @@ const HomeScreen = ({
               {showIncrease ? "Active" : "Updated"}
             </Text>
           </View>
-
-          {/* Refresh Button */}
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={onRefresh}
@@ -627,7 +560,6 @@ const HomeScreen = ({
     );
   };
 
-  // Quick Actions Component - Only Send and Receive
   const QuickActions = () => (
     <View style={styles.quickActionsWrapper}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -647,7 +579,6 @@ const HomeScreen = ({
           </LinearGradient>
           <Text style={styles.actionText}>Send</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.actionItem}
           activeOpacity={0.8}
@@ -667,7 +598,6 @@ const HomeScreen = ({
     </View>
   );
 
-  // Send Platform Modal
   const SendPlatformModal = () => (
     <Modal
       animationType="slide"
@@ -684,7 +614,6 @@ const HomeScreen = ({
               <Ionicons name="close" size={24} color={DARK_TEXT} />
             </TouchableOpacity>
           </View>
-
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -707,7 +636,6 @@ const HomeScreen = ({
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </Pressable>
-
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -730,7 +658,6 @@ const HomeScreen = ({
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </Pressable>
-
           <Pressable
             style={({ pressed }) => [
               styles.platformItem,
@@ -758,7 +685,6 @@ const HomeScreen = ({
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </Pressable>
-
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={closeSendModal}
@@ -781,7 +707,6 @@ const HomeScreen = ({
       >
         <SafeAreaView style={styles.safeArea}>
           <HeaderBar />
-
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             refreshControl={
@@ -800,7 +725,6 @@ const HomeScreen = ({
               <ProfileCard />
               <BalanceCard />
               <QuickActions />
-
               <SpendCard
                 buttonScale={buttonScale}
                 onPressIn={handlePressIn}
@@ -808,7 +732,7 @@ const HomeScreen = ({
                 onServiceSelect={handleServiceSelect}
                 userBalance={profileData?.balance || userData?.balance || 0}
                 navigation={navigation}
-                buttonText="Smart Invest"
+                buttonText="Use your $0.30 to pay for bills, airtime, event tickets on Spend MyChangeX"
               />
             </View>
           </ScrollView>
@@ -820,25 +744,14 @@ const HomeScreen = ({
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: "#0136c0",
-  },
-  gradientBackground: {
-    flex: 1,
-  },
+  background: { flex: 1, backgroundColor: "#0136c0" },
+  gradientBackground: { flex: 1 },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
-  },
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+  scrollContent: { flexGrow: 1, paddingBottom: 30 },
+  mainContent: { flex: 1, paddingHorizontal: 20 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -847,10 +760,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginBottom: 5,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
   headerTitle: {
     color: WHITE,
     fontSize: 22,
@@ -858,15 +768,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     letterSpacing: 0.5,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
-  },
-  iconButton: {
-    padding: 8,
-    position: "relative",
-  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 15 },
+  iconButton: { padding: 8, position: "relative" },
   badge: {
     position: "absolute",
     top: 4,
@@ -880,11 +783,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#0136c0",
   },
-  badgeText: {
-    color: WHITE,
-    fontSize: 10,
-    fontWeight: "bold",
-  },
+  badgeText: { color: WHITE, fontSize: 10, fontWeight: "bold" },
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 20,
@@ -906,14 +805,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
   },
-  profileInitial: {
-    color: WHITE,
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  profileInfo: {
-    flex: 1,
-  },
+  profileInitial: { color: WHITE, fontSize: 22, fontWeight: "700" },
+  profileInfo: { flex: 1 },
   profileUsername: {
     color: WHITE,
     fontSize: 18,
@@ -925,7 +818,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "400",
   },
-  // Balance Card Styles
   balanceCard: {
     padding: 0,
     overflow: "hidden",
@@ -937,22 +829,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  balanceGradient: {
-    padding: 24,
-    borderRadius: 20,
-    position: "relative",
-  },
+  balanceGradient: { padding: 24, borderRadius: 20, position: "relative" },
   balanceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  balanceLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  balanceLabelContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
   balanceLabel: {
     color: "rgba(255, 255, 255, 0.7)",
     fontSize: 14,
@@ -963,7 +847,7 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "transparent",
     width: 36,
     height: 36,
     justifyContent: "center",
@@ -981,11 +865,7 @@ const styles = StyleSheet.create({
     right: -20,
     height: 100,
   },
-  glowEffect: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 20,
-  },
+  glowEffect: { width: "100%", height: "100%", borderRadius: 20 },
   balanceAmount: {
     color: WHITE,
     fontSize: 48,
@@ -999,7 +879,6 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.5)",
     fontSize: 16,
     fontWeight: "500",
-    marginTop: 4,
     letterSpacing: 1,
   },
   balanceChangeContainer: {
@@ -1075,10 +954,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     letterSpacing: 0.3,
   },
-  quickActionsWrapper: {
-    marginTop: 24,
-    marginBottom: 32,
-  },
+  quickActionsWrapper: { marginTop: 24, marginBottom: 32 },
   sectionTitle: {
     color: WHITE,
     fontSize: 18,
@@ -1086,15 +962,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     letterSpacing: 0.3,
   },
-  actionsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 40,
-  },
-  actionItem: {
-    alignItems: "center",
-    width: 80,
-  },
+  actionsContainer: { flexDirection: "row", justifyContent: "center", gap: 40 },
+  actionItem: { alignItems: "center", width: 80 },
   actionCircle: {
     width: 70,
     height: 70,
@@ -1108,15 +977,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  actionText: {
-    color: WHITE,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  actionText: { color: WHITE, fontSize: 14, fontWeight: "600" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
@@ -1136,11 +998,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
   },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0136c0",
-  },
+  modalTitle: { fontSize: 22, fontWeight: "700", color: "#0136c0" },
   platformItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1160,28 +1018,16 @@ const styles = StyleSheet.create({
     marginRight: 16,
     padding: 8,
   },
-  platformImage: {
-    width: "100%",
-    height: "100%",
-  },
-  mychangexLogo: {
-    width: "80%",
-    height: "80%",
-  },
-  platformInfo: {
-    flex: 1,
-  },
+  platformImage: { width: "100%", height: "100%" },
+  mychangexLogo: { width: "80%", height: "80%" },
+  platformInfo: { flex: 1 },
   platformName: {
     fontSize: 16,
     fontWeight: "600",
     color: DARK_TEXT,
     marginBottom: 4,
   },
-  platformDescription: {
-    fontSize: 13,
-    color: "#666",
-    fontWeight: "400",
-  },
+  platformDescription: { fontSize: 13, color: "#666", fontWeight: "400" },
   modalCloseButton: {
     marginTop: 20,
     backgroundColor: "#f5f5f5",
@@ -1189,11 +1035,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  modalCloseText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  modalCloseText: { color: "#666", fontSize: 16, fontWeight: "600" },
 });
 
 export default HomeScreen;
