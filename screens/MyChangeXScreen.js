@@ -12,10 +12,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Alert,
+  Dimensions,
+  StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { 
   supabase, 
   formatZimbabwePhone, 
@@ -25,8 +29,27 @@ import {
 } from './supabase';
 import { NotificationService } from '../screens/services/notificationService';
 
+const { width, height } = Dimensions.get('window');
+
+const PRIMARY_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const LIGHT_TEXT = "#e9edf9";
+const CARD_BG = "rgba(255, 255, 255, 0.08)";
+const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const SUCCESS_GREEN = "#00C853";
+const ERROR_RED = "#FF5252";
+
 // Reusable custom modal for displaying messages
-const MessageModal = ({ visible, title, message, onClose }) => {
+const MessageModal = ({ visible, title, message, onClose, type = 'info' }) => {
+  const getBackgroundColor = () => {
+    switch (type) {
+      case 'error': return ERROR_RED;
+      case 'success': return SUCCESS_GREEN;
+      case 'warning': return '#FFA726';
+      default: return PRIMARY_BLUE;
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -35,12 +58,18 @@ const MessageModal = ({ visible, title, message, onClose }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
-          <Pressable style={styles.modalButton} onPress={onClose}>
-            <Text style={styles.modalButtonText}>OK</Text>
-          </Pressable>
+        <Pressable style={styles.modalBackdrop} onPress={onClose} />
+        <View style={[styles.messageModalContent, { backgroundColor: getBackgroundColor() }]}>
+          <View style={styles.messageModalHeader}>
+            <Text style={styles.messageModalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={WHITE} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.messageModalMessage}>{message}</Text>
+          <TouchableOpacity style={styles.messageModalButton} onPress={onClose}>
+            <Text style={styles.messageModalButtonText}>OK</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -72,6 +101,7 @@ const MyChangeXScreen = () => {
     visible: false,
     title: '',
     message: '',
+    type: 'info'
   });
 
   // --- References & Permissions ---
@@ -90,7 +120,6 @@ const MyChangeXScreen = () => {
   useEffect(() => {
     fetchUserData();
     
-    // Check if we're in send-back mode from CouponTransactions
     if (route.params?.sendBackMode && route.params?.sendBackData) {
       const { recipientId, recipientPhone, recipientName, presetAmount, receivedAmount } = route.params.sendBackData;
       
@@ -101,11 +130,9 @@ const MyChangeXScreen = () => {
       setAmount(presetAmount || '');
       setOriginalReceivedAmount(receivedAmount || null);
       
-      // Verify the recipient exists
       verifyRecipient(recipientPhone, recipientId);
     }
     
-    // Cleanup timeout on unmount
     return () => {
       if (autoNavigateTimeoutRef.current) {
         clearTimeout(autoNavigateTimeoutRef.current);
@@ -113,7 +140,6 @@ const MyChangeXScreen = () => {
     };
   }, [route.params]);
 
-  // Helper function to verify recipient
   const verifyRecipient = async (phone, id) => {
     try {
       const formattedPhone = formatZimbabwePhone(phone);
@@ -130,6 +156,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Error',
           message: 'Recipient not found. Please select recipient again.',
+          type: 'error'
         });
         setSendBackMode(false);
         setPhoneNumber('');
@@ -147,11 +174,10 @@ const MyChangeXScreen = () => {
     }
   };
 
-  // REAL-TIME BALANCE SUBSCRIPTION FOR MyChangeXScreen
+  // REAL-TIME BALANCE SUBSCRIPTION
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to balance changes for this user
     const balanceSubscription = supabase
       .channel('mychangex_balance_changes')
       .on(
@@ -163,13 +189,11 @@ const MyChangeXScreen = () => {
           filter: `id=eq.${userId}`
         },
         (payload) => {
-          // Update local balance immediately
           setUserBalance(payload.new.balance);
         }
       )
       .subscribe();
 
-    // Cleanup subscription
     return () => {
       balanceSubscription.unsubscribe();
     };
@@ -178,7 +202,6 @@ const MyChangeXScreen = () => {
   // --- Data Fetching ---
   const fetchUserData = async () => {
     try {
-      // Get user from session (PIN-based auth)
       const sessionResult = await getUserSession();
       
       if (!sessionResult.success || !sessionResult.user) {
@@ -186,6 +209,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Error',
           message: 'Please login again.',
+          type: 'error'
         });
         navigation.navigate('Login');
         return;
@@ -195,11 +219,9 @@ const MyChangeXScreen = () => {
       setUserId(user.id);
       setUserPhone(user.phone || '');
 
-      // Get user profile with balance
       const { data: profileData, error } = await getUserProfileByPhone(user.phone);
       
       if (error) {
-        // Use session data as fallback
         setUserBalance(user.balance || 0);
       } else {
         setUserBalance(profileData.balance || 0);
@@ -210,6 +232,7 @@ const MyChangeXScreen = () => {
         visible: true,
         title: 'Error',
         message: 'Failed to load user data.',
+        type: 'error'
       });
     }
   };
@@ -245,20 +268,20 @@ const MyChangeXScreen = () => {
       return {
         type: 'error',
         message: `Insufficient balance. You need $${shortage.toFixed(2)} more.`,
-        color: '#FF6B6B'
+        color: ERROR_RED
       };
     } else if (sendAmount >= 1.00) {
       return {
         type: 'error',
         message: 'Change coupons must be less than $1.00.',
-        color: '#FF6B6B'
+        color: ERROR_RED
       };
     } else {
       const remaining = userBalance - sendAmount;
       return {
         type: 'success', 
         message: `Remaining balance: $${remaining.toFixed(2)}`,
-        color: '#4CAF50'
+        color: SUCCESS_GREEN
       };
     }
   };
@@ -281,11 +304,10 @@ const MyChangeXScreen = () => {
     if (!isSendEnabled()) {
       return ['#CCCCCC', '#BBBBBB'];
     } else {
-      return ['#4CAF50', '#45a049'];
+      return [PRIMARY_BLUE, PRIMARY_BLUE];
     }
   };
 
-  // Handle amount input change with validation
   const handleAmountChange = (text) => {
     const cleaned = text.replace(/[^0-9.]/g, '');
     const parts = cleaned.split('.');
@@ -309,7 +331,6 @@ const MyChangeXScreen = () => {
   };
 
   const handleSendCoupon = () => {
-    // If in send-back mode, show different modal
     if (sendBackMode) {
       Alert.alert(
         'Change Recipient',
@@ -319,7 +340,6 @@ const MyChangeXScreen = () => {
           { 
             text: 'Change Recipient', 
             onPress: () => {
-              // Reset to regular mode
               setSendBackMode(false);
               setPhoneNumber('');
               setRecipientName('');
@@ -347,6 +367,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Permission Required',
           message: 'Camera permission is required to scan QR codes. Please enable it in your device settings.',
+          type: 'error'
         });
         return;
       }
@@ -367,24 +388,24 @@ const MyChangeXScreen = () => {
         visible: true,
         title: 'Error',
         message: 'Please enter a phone number.',
+        type: 'error'
       });
       return;
     }
 
     const formattedPhone = formatZimbabwePhone(phoneNumber);
 
-    // Check for self-transfer
     if (formattedPhone === userPhone) {
       setMessageModal({
         visible: true,
         title: 'Error',
         message: 'You cannot send money to yourself.',
+        type: 'error'
       });
       return;
     }
 
     try {
-      // Verify recipient exists
       const { data: recipientData, error } = await supabase
         .from('profiles')
         .select('id, full_name, phone, balance')
@@ -396,6 +417,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Error',
           message: 'Recipient not found in the system.',
+          type: 'error'
         });
         return;
       }
@@ -403,13 +425,14 @@ const MyChangeXScreen = () => {
       setRecipientName(recipientData.full_name || 'User');
       setRecipientId(recipientData.id);
       setShowPhoneFormModal(false);
-      setSendBackMode(false); // Exit send-back mode if user manually selects recipient
+      setSendBackMode(false);
       setOriginalReceivedAmount(null);
 
       setMessageModal({
         visible: true,
         title: 'Recipient Found',
         message: `Recipient: ${recipientData.full_name || 'User'} (${phoneNumber}). You can now enter the amount and send.`,
+        type: 'success'
       });
 
     } catch (error) {
@@ -417,6 +440,7 @@ const MyChangeXScreen = () => {
         visible: true,
         title: 'Error',
         message: 'Failed to verify recipient. Please try again.',
+        type: 'error'
       });
     }
   };
@@ -438,6 +462,7 @@ const MyChangeXScreen = () => {
             visible: true,
             title: 'Error',
             message: 'You cannot send money to yourself.',
+            type: 'error'
           });
           setShowCamera(false);
           isScanning.current = false;
@@ -455,6 +480,7 @@ const MyChangeXScreen = () => {
             visible: true,
             title: 'Error',
             message: 'Recipient not found in the system.',
+            type: 'error'
           });
           setShowCamera(false);
           isScanning.current = false;
@@ -465,13 +491,14 @@ const MyChangeXScreen = () => {
         setRecipientName(recipientData.full_name || 'User');
         setRecipientId(recipientData.id);
         setShowCamera(false);
-        setSendBackMode(false); // Exit send-back mode
+        setSendBackMode(false);
         setOriginalReceivedAmount(null);
 
         setMessageModal({
           visible: true,
           title: 'QR Scanned',
           message: `Coupon scanned for ${recipientData.full_name || 'User'} (${scannedPhone}). You can now enter the amount and send.`,
+          type: 'success'
         });
 
       } else {
@@ -480,6 +507,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Invalid QR Code',
           message: 'This is not a valid coupon QR code. Please try again or enter the number manually.',
+          type: 'error'
         });
       }
     } catch (error) {
@@ -494,6 +522,7 @@ const MyChangeXScreen = () => {
             visible: true,
             title: 'Error',
             message: 'You cannot send money to yourself.',
+            type: 'error'
           });
           setShowCamera(false);
           isScanning.current = false;
@@ -511,6 +540,7 @@ const MyChangeXScreen = () => {
             visible: true,
             title: 'Error',
             message: 'Recipient not found in the system.',
+            type: 'error'
           });
           setShowCamera(false);
           isScanning.current = false;
@@ -521,12 +551,13 @@ const MyChangeXScreen = () => {
         setRecipientName(recipientData.full_name || 'User');
         setRecipientId(recipientData.id);
         setShowCamera(false);
-        setSendBackMode(false); // Exit send-back mode
+        setSendBackMode(false);
         setOriginalReceivedAmount(null);
         setMessageModal({
           visible: true,
           title: 'QR Scanned',
           message: `Detected phone number: ${phoneMatch[0]}. You can now enter the amount and send.`,
+          type: 'success'
         });
       } else {
         setShowCamera(false);
@@ -534,6 +565,7 @@ const MyChangeXScreen = () => {
           visible: true,
           title: 'Invalid QR Code',
           message: 'The scanned code is not a valid phone number or coupon.',
+          type: 'error'
         });
       }
     } finally {
@@ -541,10 +573,8 @@ const MyChangeXScreen = () => {
     }
   }, [userPhone]);
 
-  // Simplified coupon restriction logic
   const checkCouponRestriction = async () => {
     try {
-      // If user is sending back to someone who sent them a coupon, allow it
       const { data: receivedCoupons } = await supabase
         .from('transactions')
         .select('*')
@@ -553,74 +583,68 @@ const MyChangeXScreen = () => {
         .lt('amount', 1.00)
         .limit(1);
 
-      // If user received a coupon from this recipient, allow send-back
       if (receivedCoupons && receivedCoupons.length > 0) {
         return { isValid: true, isSendBack: true };
       }
 
-      // For first-time sends, always allow (since amount is already validated to be < $1.00)
       return { isValid: true, isSendBack: false };
 
     } catch (error) {
-      // If we can't check restrictions, allow the transaction
       return { isValid: true, isSendBack: false };
     }
   };
 
-  // Handle the "Send" button press
   const handleSend = async () => {
-    // --- Input Validation ---
     if (!phoneNumber) {
-      setMessageModal({ visible: true, title: 'Error', message: 'Please enter or scan a recipient phone number.' });
+      setMessageModal({ visible: true, title: 'Error', message: 'Please enter or scan a recipient phone number.', type: 'error' });
       return;
     }
     
     const sendAmount = parseFloat(amount);
     if (!amount || sendAmount <= 0) {
-      setMessageModal({ visible: true, title: 'Error', message: 'Please enter a valid amount.' });
+      setMessageModal({ visible: true, title: 'Error', message: 'Please enter a valid amount.', type: 'error' });
       return;
     }
     
-    // --- CHANGE COUPON LIMIT VALIDATION ---
     if (sendAmount >= 1.00) {
       setMessageModal({ 
         visible: true, 
         title: 'Change Coupon Limit', 
-        message: 'Change coupons must be less than $1.00. Please enter an amount between $0.01 and $0.99.' 
+        message: 'Change coupons must be less than $1.00. Please enter an amount between $0.01 and $0.99.',
+        type: 'error'
       });
       return;
     }
     
-    // --- BALANCE VALIDATION ---
     if (exceedsBalance()) {
       setMessageModal({ 
         visible: true, 
         title: 'Insufficient Balance', 
-        message: `You cannot send $${sendAmount.toFixed(2)}. Your balance is only $${userBalance.toFixed(2)}.` 
+        message: `You cannot send $${sendAmount.toFixed(2)}. Your balance is only $${userBalance.toFixed(2)}.`,
+        type: 'error'
       });
       return;
     }
 
     const formattedRecipientPhone = formatZimbabwePhone(phoneNumber);
     if (formattedRecipientPhone === userPhone) {
-      setMessageModal({ visible: true, title: 'Error', message: 'You cannot send money to yourself.' });
+      setMessageModal({ visible: true, title: 'Error', message: 'You cannot send money to yourself.', type: 'error' });
       return;
     }
 
     if (!recipientId) {
-      setMessageModal({ visible: true, title: 'Error', message: 'Recipient not properly identified. Please reselect recipient.' });
+      setMessageModal({ visible: true, title: 'Error', message: 'Recipient not properly identified. Please reselect recipient.', type: 'error' });
       return;
     }
 
-    // --- SIMPLIFIED COUPON RESTRICTION CHECK ---
     const restrictionCheck = await checkCouponRestriction();
     
-    // If in send-back mode but restriction check says it's not a valid send-back
     if (sendBackMode && !restrictionCheck.isSendBack) {
       setMessageModal({
         visible: true,
         title: 'Coupon Restriction',
         message: 'This appears to not be a valid send-back transaction. Please verify you received a coupon from this user first.',
+        type: 'error'
       });
       return;
     }
@@ -630,6 +654,7 @@ const MyChangeXScreen = () => {
         visible: true,
         title: 'Coupon Restriction',
         message: 'You can only send coupons to users who have sent you coupons first.',
+        type: 'error'
       });
       return;
     }
@@ -637,17 +662,13 @@ const MyChangeXScreen = () => {
     setLoading(true);
 
     try {
-      // OPTIMISTIC UPDATE: Update UI immediately for better UX
       const oldBalance = userBalance;
       const newBalance = oldBalance - sendAmount;
       setUserBalance(newBalance);
 
-      // Try RPC method
       let transactionResult = await transferFunds(userId, recipientId, sendAmount);
 
-      // If RPC fails, use manual method
       if (!transactionResult.success) {
-        // Create transaction record
         const { data: transaction, error: transactionError } = await supabase
           .from('transactions')
           .insert({
@@ -667,7 +688,6 @@ const MyChangeXScreen = () => {
           throw new Error(`Transaction creation failed: ${transactionError.message}`);
         }
         
-        // Update sender balance
         const { error: senderError } = await supabase
           .from('profiles')
           .update({ 
@@ -680,7 +700,6 @@ const MyChangeXScreen = () => {
           throw new Error(`Sender update failed: ${senderError.message}`);
         }
         
-        // Update receiver balance
         const { data: receiverProfile } = await supabase
           .from('profiles')
           .select('balance')
@@ -709,12 +728,10 @@ const MyChangeXScreen = () => {
       }
 
       if (!transactionResult.success) {
-        // REVERT optimistic update if transaction fails
         setUserBalance(oldBalance);
         throw new Error(transactionResult.error || 'Transaction failed');
       }
 
-      // ✅ PUSH NOTIFICATION: Send local notification to sender
       const notificationTitle = sendBackMode || restrictionCheck.isSendBack 
         ? 'Coupon Sent Back! 🔄' 
         : 'Change Coupon Sent! 🎉';
@@ -735,7 +752,6 @@ const MyChangeXScreen = () => {
         }
       );
 
-      // Show success message with auto-navigation info
       const successMessage = sendBackMode || restrictionCheck.isSendBack
         ? `✅ Successfully sent back $${sendAmount.toFixed(2)} coupon to ${recipientName || phoneNumber}.\n\nYour new balance is $${newBalance.toFixed(2)}.\n\nRedirecting to Home in 3 seconds...`
         : `✅ Successfully sent $${sendAmount.toFixed(2)} change coupon to ${recipientName || phoneNumber}.\n\nYour new balance is $${newBalance.toFixed(2)}.\n\nRedirecting to Home in 3 seconds...`;
@@ -744,9 +760,9 @@ const MyChangeXScreen = () => {
         visible: true,
         title: sendBackMode || restrictionCheck.isSendBack ? 'Coupon Sent Back! 🔄' : 'Change Coupon Sent! 🎉',
         message: successMessage,
+        type: 'success'
       });
 
-      // Reset form fields after a short delay
       setTimeout(() => {
         setAmount('');
         setPhoneNumber('');
@@ -756,24 +772,19 @@ const MyChangeXScreen = () => {
         setOriginalReceivedAmount(null);
       }, 500);
 
-      // ✅ AUTOMATICALLY NAVIGATE TO HOME SCREEN AFTER 3 SECONDS
-      // Clear any existing timeout
       if (autoNavigateTimeoutRef.current) {
         clearTimeout(autoNavigateTimeoutRef.current);
       }
       
-      // Set new timeout for auto-navigation
       autoNavigateTimeoutRef.current = setTimeout(() => {
         navigation.navigate('Home');
       }, 3000);
 
     } catch (error) {
-      // REVERT optimistic update on error
       setUserBalance(oldBalance);
       
       let errorMessage = error.message || 'Failed to complete transaction. Please try again.';
       
-      // User-friendly error messages
       if (error.message.includes('Insufficient funds') || error.message.includes('balance')) {
         errorMessage = 'Insufficient balance for this transaction.';
       } else if (error.message.includes('not found')) {
@@ -786,213 +797,279 @@ const MyChangeXScreen = () => {
         visible: true,
         title: 'Transaction Failed',
         message: errorMessage,
+        type: 'error'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Get balance status for display
   const balanceStatus = getBalanceStatus();
 
-  // Handle modal close with additional logic
   const handleMessageModalClose = () => {
     setMessageModal({ ...messageModal, visible: false });
     
-    // Clear auto-navigation timeout if modal is closed early
     if (autoNavigateTimeoutRef.current) {
       clearTimeout(autoNavigateTimeoutRef.current);
     }
   };
 
   return (
-    <LinearGradient
-      colors={['#0136c0', '#0136c0']}
-      style={styles.background}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.container}>
-            {/* Header */}
-            <Text style={styles.header}>
-              {sendBackMode ? 'Send Back Coupon' : 'Send Change Coupon'}
-            </Text>
-            
-            {/* Change Coupon Info */}
-            <View style={styles.infoContainer}>
-              {sendBackMode ? (
-                <>
-                  <Text style={styles.infoText}>
-                    🔄 Sending back coupon to original sender
+    <View style={styles.background}>
+      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
+      <LinearGradient
+        colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={WHITE} />
+            </TouchableOpacity>
+            <View style={styles.headerLeft}>
+              <Ionicons name="send-outline" size={28} color={WHITE} />
+              <Text style={styles.headerTitle}>
+                {sendBackMode ? 'Send Back Coupon' : 'MyChangeX Send'}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.infoButton}
+              onPress={() => {
+                Alert.alert(
+                  'Coupon Information',
+                  'Send small change amounts (< $1.00) to other MyChangeX users.\n\n• First-time sends to any user allowed\n• Received coupons can be sent back\n• Auto-navigates to Home after sending',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
+              <Ionicons name="information-circle-outline" size={24} color={WHITE} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Info Card */}
+            <View style={[styles.card, styles.infoCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.infoCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.infoHeader}>
+                  <Ionicons name="sparkles-outline" size={20} color={WHITE} />
+                  <Text style={styles.infoTitle}>
+                    {sendBackMode ? 'Send Back Mode' : 'Change Coupon Transfer'}
                   </Text>
-                  <Text style={[styles.infoText, { fontSize: 12, marginTop: 8 }]}>
-                    You can edit the amount to send back any portion of your received coupon
-                  </Text>
-                  {originalReceivedAmount && (
-                    <Text style={[styles.infoText, { fontSize: 12, marginTop: 4, color: '#FFA726' }]}>
+                </View>
+                <Text style={styles.infoText}>
+                  {sendBackMode 
+                    ? 'Sending back a portion of a received coupon to the original sender'
+                    : 'Send small change amounts (less than $1.00) to other MyChangeX users'
+                  }
+                </Text>
+                {sendBackMode && originalReceivedAmount && (
+                  <View style={styles.originalAmount}>
+                    <Ionicons name="receipt-outline" size={16} color="rgba(255, 255, 255, 0.7)" />
+                    <Text style={styles.originalAmountText}>
                       Original received amount: ${originalReceivedAmount.toFixed(2)}
                     </Text>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Text style={styles.infoText}>
-                    💡 Send small change amounts (less than $1.00) to other MyChangeX users
-                  </Text>
-                  <Text style={[styles.infoText, { fontSize: 12, marginTop: 8 }]}>
-                    🔄 Received coupons can be sent back to the original sender
-                  </Text>
-                </>
-              )}
-            </View>
-
-            {/* Balance Display */}
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balanceLabel}>Your Balance</Text>
-              <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
-            </View>
-
-            {/* Recipient Info Display */}
-            {phoneNumber ? (
-              <View style={styles.recipientContainer}>
-                <Text style={styles.recipientLabel}>
-                  {sendBackMode ? 'Sending Back To' : 'Recipient'}
-                </Text>
-                <Text style={styles.recipientInfo}>
-                  {recipientName || 'User'} ({phoneNumber})
-                </Text>
-                {sendBackMode ? (
-                  <Text style={styles.sendBackNotice}>
-                    💡 This is a "Send Back" transaction. You can edit the amount.
-                  </Text>
-                ) : (
-                  <Pressable 
-                    style={styles.changeRecipientButton}
-                    onPress={() => {
-                      setPhoneNumber('');
-                      setRecipientName('');
-                      setRecipientId(null);
-                      setShowRecipientModal(true);
-                    }}
-                  >
-                    <Text style={styles.changeRecipientText}>Change Recipient</Text>
-                  </Pressable>
+                  </View>
                 )}
-              </View>
-            ) : null}
-
-            {/* Amount Input */}
-            <View style={styles.amountContainer}>
-              <Text style={styles.label}>
-                {sendBackMode ? 'Amount to Send Back (editable)' : 'Enter Change Amount (max $0.99)'}
-              </Text>
-              <View style={[
-                styles.amountInputContainer,
-                (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputContainerError
-              ]}>
-                <Text style={[
-                  styles.currencySymbol,
-                  (exceedsBalance() || !isWithinChangeLimit()) && styles.currencySymbolError
-                ]}>$</Text>
-                <TextInput
-                  style={[
-                    styles.amountInput,
-                    (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputError
-                  ]}
-                  placeholder={sendBackMode && originalReceivedAmount ? originalReceivedAmount.toFixed(2) : "0.00"}
-                  placeholderTextColor="rgba(255,255,255,0.6)"
-                  value={amount}
-                  onChangeText={handleAmountChange}
-                  keyboardType="decimal-pad"
-                  selectionColor="#ffffff"
-                  returnKeyType="done"
-                  maxLength={4}
-                  editable={true} // Always editable, even in send-back mode
-                />
-              </View>
-              
-              {/* Balance Status Message */}
-              {balanceStatus && (
-                <Text style={[styles.balanceStatus, { color: balanceStatus.color }]}>
-                  {balanceStatus.message}
-                </Text>
-              )}
-              
-              {/* Original amount suggestion for send-back mode */}
-              {sendBackMode && originalReceivedAmount && !amount && (
-                <Pressable 
-                  onPress={() => setAmount(originalReceivedAmount.toFixed(2))}
-                  style={styles.suggestionButton}
-                >
-                  <Text style={styles.suggestionText}>
-                    Tap to use full amount: ${originalReceivedAmount.toFixed(2)}
-                  </Text>
-                </Pressable>
-              )}
+              </LinearGradient>
             </View>
 
-            {/* Send Coupon Button - Only show if NOT in send-back mode or if no recipient selected */}
-            {!sendBackMode && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.scanButton,
-                  pressed && styles.scanButtonPressed,
-                  loading && styles.disabledButton,
-                ]}
+            {/* Balance Card */}
+            <Text style={styles.sectionTitle}>Your Balance</Text>
+            <View style={[styles.card, styles.balanceCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.balanceCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.balanceHeader}>
+                  <Ionicons name="wallet-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+                  <Text style={styles.balanceLabel}>Available Balance</Text>
+                </View>
+                <View style={styles.balanceAmountContainer}>
+                  <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
+                  <Text style={styles.balanceCurrency}>USD</Text>
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* Recipient Card */}
+            <Text style={styles.sectionTitle}>Recipient</Text>
+            {phoneNumber ? (
+              <View style={[styles.card, styles.recipientCard]}>
+                <LinearGradient
+                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                  style={styles.recipientCardGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.recipientHeader}>
+                    <Ionicons name="person-outline" size={20} color={WHITE} />
+                    <Text style={styles.recipientLabel}>
+                      {sendBackMode ? 'Sending Back To' : 'Recipient'}
+                    </Text>
+                  </View>
+                  <Text style={styles.recipientInfo}>
+                    {recipientName || 'User'} ({phoneNumber})
+                  </Text>
+                  {sendBackMode ? (
+                    <Text style={styles.sendBackNotice}>
+                      💡 This is a "Send Back" transaction
+                    </Text>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.changeRecipientButton}
+                      onPress={() => {
+                        setPhoneNumber('');
+                        setRecipientName('');
+                        setRecipientId(null);
+                        setShowRecipientModal(true);
+                      }}
+                    >
+                      <Text style={styles.changeRecipientText}>Change Recipient</Text>
+                    </TouchableOpacity>
+                  )}
+                </LinearGradient>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.card, styles.selectRecipientCard]}
                 onPress={handleSendCoupon}
-                disabled={loading}
-                android_ripple={{ color: 'rgba(1, 54, 192, 0.1)' }}
               >
                 <LinearGradient
-                  colors={['#ffffff', '#f8f9fa']}
-                  style={styles.buttonGradient}
+                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                  style={styles.selectRecipientCardGradient}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
-                  <Text style={styles.scanButtonText}>
-                    {phoneNumber ? 'Change Recipient' : 'Select Recipient'}
+                  <Ionicons name="person-add-outline" size={28} color={WHITE} />
+                  <Text style={styles.selectRecipientText}>Select Recipient</Text>
+                  <Text style={styles.selectRecipientSubtext}>
+                    Choose recipient via QR code or phone number
                   </Text>
                 </LinearGradient>
-              </Pressable>
+              </TouchableOpacity>
             )}
+
+            {/* Amount Card */}
+            <Text style={styles.sectionTitle}>Amount</Text>
+            <View style={[styles.card, styles.amountCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.amountCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.amountHeader}>
+                  <Ionicons name="cash-outline" size={20} color={WHITE} />
+                  <Text style={styles.amountLabel}>
+                    {sendBackMode ? 'Amount to Send Back' : 'Enter Change Amount'}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.amountInputContainer,
+                  (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputContainerError
+                ]}>
+                  <Text style={styles.dollarSign}>$</Text>
+                  <TextInput
+                    style={[
+                      styles.amountInput,
+                      (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputError
+                    ]}
+                    placeholder={sendBackMode && originalReceivedAmount ? originalReceivedAmount.toFixed(2) : "0.00"}
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={amount}
+                    onChangeText={handleAmountChange}
+                    keyboardType="decimal-pad"
+                    selectionColor={WHITE}
+                    returnKeyType="done"
+                    maxLength={4}
+                    editable={true}
+                  />
+                </View>
+                
+                {balanceStatus && (
+                  <View style={[
+                    styles.balanceStatusContainer,
+                    { backgroundColor: `${balanceStatus.color}20` }
+                  ]}>
+                    <Ionicons 
+                      name={balanceStatus.type === 'error' ? "warning-outline" : "checkmark-circle-outline"} 
+                      size={16} 
+                      color={balanceStatus.color} 
+                    />
+                    <Text style={[styles.balanceStatus, { color: balanceStatus.color }]}>
+                      {balanceStatus.message}
+                    </Text>
+                  </View>
+                )}
+                
+                {sendBackMode && originalReceivedAmount && !amount && (
+                  <TouchableOpacity 
+                    style={styles.suggestionButton}
+                    onPress={() => setAmount(originalReceivedAmount.toFixed(2))}
+                  >
+                    <LinearGradient
+                      colors={["rgba(255, 167, 38, 0.1)", "rgba(255, 167, 38, 0.05)"]}
+                      style={styles.suggestionButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text style={styles.suggestionText}>
+                        Tap to use full amount: ${originalReceivedAmount.toFixed(2)}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </LinearGradient>
+            </View>
 
             {/* Send Button */}
             {phoneNumber && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  !isSendEnabled() && styles.sendButtonDisabled,
-                  pressed && isSendEnabled() && styles.sendButtonPressed,
-                ]}
+              <TouchableOpacity 
+                style={styles.sendButton}
                 onPress={handleSend}
                 disabled={!isSendEnabled()}
-                android_ripple={isSendEnabled() ? { color: 'rgba(1, 54, 192, 0.1)' } : undefined}
+                activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={getSendButtonColors()}
-                  style={styles.buttonGradient}
+                  style={styles.sendButtonGradient}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#ffffff" />
+                    <ActivityIndicator color={WHITE} />
                   ) : (
-                    <Text style={[
-                      styles.sendButtonText,
-                      !isSendEnabled() && styles.disabledButtonText
-                    ]}>
-                      {getSendButtonText()}
-                    </Text>
+                    <>
+                      <Ionicons 
+                        name={sendBackMode ? "refresh-outline" : "send-outline"} 
+                        size={24} 
+                        color={WHITE} 
+                      />
+                      <Text style={styles.sendButtonText}>
+                        {getSendButtonText()}
+                      </Text>
+                    </>
                   )}
                 </LinearGradient>
-              </Pressable>
+              </TouchableOpacity>
             )}
 
-            {/* In send-back mode, show option to switch to regular mode */}
+            {/* Switch Mode Button */}
             {sendBackMode && (
-              <Pressable
+              <TouchableOpacity
                 style={styles.switchModeButton}
                 onPress={() => {
                   setSendBackMode(false);
@@ -1003,500 +1080,686 @@ const MyChangeXScreen = () => {
                   setOriginalReceivedAmount(null);
                 }}
               >
-                <Text style={styles.switchModeButtonText}>Switch to Regular Send Mode</Text>
-              </Pressable>
+                <LinearGradient
+                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                  style={styles.switchModeButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="swap-horizontal-outline" size={20} color={WHITE} />
+                  <Text style={styles.switchModeButtonText}>Switch to Regular Send Mode</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             )}
 
-            {/* Coupon Rules Info */}
+            {/* Rules Info */}
             <View style={styles.rulesContainer}>
-              <Text style={styles.rulesTitle}>Coupon Rules:</Text>
-              <Text style={styles.rulesText}>• Amount must be less than $1.00</Text>
-              <Text style={styles.rulesText}>• First-time coupon to any user is allowed</Text>
-              <Text style={styles.rulesText}>• Received coupons can be sent back to original sender</Text>
-              <Text style={styles.rulesText}>• You can send back any portion of a received coupon</Text>
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Modal for Recipient Options - Only show if not in send-back mode */}
-        {!sendBackMode && (
-          <Modal
-            visible={showRecipientModal}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setShowRecipientModal(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Add Recipient</Text>
-                <Pressable style={styles.modalButton} onPress={handleScanQR}>
-                  <Text style={styles.modalButtonText}>Scan QR Code</Text>
-                </Pressable>
-                <Pressable style={styles.modalButton} onPress={handlePhoneOption}>
-                  <Text style={styles.modalButtonText}>Enter Phone Number</Text>
-                </Pressable>
-                <Pressable onPress={() => setShowRecipientModal(false)}>
-                  <Text style={styles.modalCancel}>Cancel</Text>
-                </Pressable>
+              <Text style={styles.rulesTitle}>Coupon Rules</Text>
+              <View style={styles.ruleItem}>
+                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
+                <Text style={styles.ruleText}>Amount must be less than $1.00</Text>
               </View>
+              <View style={styles.ruleItem}>
+                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
+                <Text style={styles.ruleText}>First-time coupon to any user is allowed</Text>
+              </View>
+              <View style={styles.ruleItem}>
+                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
+                <Text style={styles.ruleText}>Received coupons can be sent back to original sender</Text>
+              </View>
+            </View>
+
+            {/* Footer Spacer */}
+            <View style={styles.footerSpacer} />
+          </ScrollView>
+
+          {/* Recipient Options Modal */}
+          {!sendBackMode && (
+            <Modal
+              visible={showRecipientModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowRecipientModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <Pressable style={styles.modalBackdrop} onPress={() => setShowRecipientModal(false)} />
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Add Recipient</Text>
+                    <TouchableOpacity onPress={() => setShowRecipientModal(false)}>
+                      <Ionicons name="close" size={24} color="#1A1A1A" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.modalOption}
+                    onPress={handleScanQR}
+                  >
+                    <LinearGradient
+                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                      style={styles.modalOptionIcon}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="qr-code-outline" size={24} color={WHITE} />
+                    </LinearGradient>
+                    <View style={styles.modalOptionInfo}>
+                      <Text style={styles.modalOptionTitle}>Scan QR Code</Text>
+                      <Text style={styles.modalOptionDescription}>Scan recipient's coupon QR code</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.modalOption}
+                    onPress={handlePhoneOption}
+                  >
+                    <LinearGradient
+                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                      style={styles.modalOptionIcon}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="call-outline" size={24} color={WHITE} />
+                    </LinearGradient>
+                    <View style={styles.modalOptionInfo}>
+                      <Text style={styles.modalOptionTitle}>Enter Phone Number</Text>
+                      <Text style={styles.modalOptionDescription}>Enter recipient's phone number manually</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.modalCloseButton}
+                    onPress={() => setShowRecipientModal(false)}
+                  >
+                    <Text style={styles.modalCloseText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+
+          {/* Phone Form Modal */}
+          <Modal
+            visible={showPhoneFormModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowPhoneFormModal(false)}
+          >
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.modalOverlay}
+            >
+              <Pressable style={styles.modalBackdrop} onPress={() => setShowPhoneFormModal(false)} />
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Enter Recipient Phone</Text>
+                  <TouchableOpacity onPress={() => setShowPhoneFormModal(false)}>
+                    <Ionicons name="close" size={24} color="#1A1A1A" />
+                  </TouchableOpacity>
+                </View>
+                
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g., 0771234567"
+                  placeholderTextColor="#999"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                  selectionColor={PRIMARY_BLUE}
+                  autoFocus={true}
+                />
+                
+                <Text style={styles.inputHint}>
+                  Enter recipient's Zimbabwean mobile number
+                </Text>
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={styles.modalButtonCancel}
+                    onPress={() => setShowPhoneFormModal(false)}
+                  >
+                    <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.modalButtonConfirm, !phoneNumber && styles.disabledButton]}
+                    onPress={handlePhoneFormSubmit}
+                    disabled={!phoneNumber}
+                  >
+                    <Text style={styles.modalButtonTextConfirm}>Submit</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
+
+          {/* Camera Modal */}
+          <Modal visible={showCamera} animationType="slide">
+            <View style={styles.cameraContainer}>
+              {permission?.granted ? (
+                <CameraView
+                  ref={cameraRef}
+                  style={styles.camera}
+                  facing="back"
+                  onBarcodeScanned={isScanning.current ? undefined : handleBarCodeScanned}
+                  barcodeScannerSettings={{
+                    barcodeTypes: ['qr'],
+                  }}
+                  onError={(error) => {
+                    setCameraError(`Camera error: ${error.message}`);
+                  }}
+                />
+              ) : (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="camera-off-outline" size={64} color={WHITE} />
+                  <Text style={styles.errorText}>
+                    {cameraError || 'Camera permission required'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.permissionButton}
+                    onPress={requestCameraAccess}
+                  >
+                    <LinearGradient
+                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                      style={styles.permissionButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.closeCameraButton}
+                onPress={() => {
+                  setShowCamera(false);
+                  isScanning.current = false;
+                }}
+              >
+                <LinearGradient
+                  colors={[ERROR_RED, ERROR_RED]}
+                  style={styles.closeCameraButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="close" size={24} color={WHITE} />
+                  <Text style={styles.closeCameraText}>Close</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           </Modal>
-        )}
 
-        {/* Phone Form Modal */}
-        <Modal
-          visible={showPhoneFormModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowPhoneFormModal(false)}
-        >
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
-          >
-            <View style={styles.phoneFormModalContent}>
-              <Text style={styles.modalTitle}>Enter Recipient Phone Number</Text>
-              
-              <TextInput
-                style={styles.phoneFormInput}
-                placeholder="Enter phone number"
-                placeholderTextColor="rgba(255,255,255,0.6)"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                selectionColor="#ffffff"
-                autoFocus={true}
-              />
-              
-              <View style={styles.phoneFormButtons}>
-                <Pressable 
-                  style={styles.phoneFormCancelButton}
-                  onPress={() => setShowPhoneFormModal(false)}
-                >
-                  <Text style={styles.phoneFormCancelText}>Cancel</Text>
-                </Pressable>
-                
-                <Pressable 
-                  style={[
-                    styles.phoneFormSubmitButton,
-                    !phoneNumber && styles.disabledButton
-                  ]}
-                  onPress={handlePhoneFormSubmit}
-                  disabled={!phoneNumber}
-                >
-                  <Text style={styles.phoneFormSubmitText}>Submit</Text>
-                </Pressable>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
-
-        {/* Camera Modal for QR Scanning */}
-        <Modal visible={showCamera} animationType="slide">
-          <View style={styles.cameraContainer}>
-            {permission?.granted ? (
-              <CameraView
-                ref={cameraRef}
-                style={styles.camera}
-                facing="back"
-                onBarcodeScanned={isScanning.current ? undefined : handleBarCodeScanned}
-                barcodeScannerSettings={{
-                  barcodeTypes: ['qr'],
-                }}
-                onError={(error) => {
-                  setCameraError(`Camera error: ${error.message}`);
-                }}
-              />
-            ) : (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                  {cameraError || 'Camera permission required. Please allow camera access.'}
-                </Text>
-                <Pressable
-                  style={styles.permissionButton}
-                  onPress={requestCameraAccess}
-                >
-                  <Text style={styles.permissionButtonText}>Grant Permission</Text>
-                </Pressable>
-              </View>
-            )}
-            <Pressable
-              style={styles.closeCameraButton}
-              onPress={() => {
-                setShowCamera(false);
-                isScanning.current = false;
-              }}
-            >
-              <Text style={styles.closeCameraText}>Close</Text>
-            </Pressable>
-          </View>
-        </Modal>
-
-        {/* Custom Message Modal */}
-        <MessageModal
-          visible={messageModal.visible}
-          title={messageModal.title}
-          message={messageModal.message}
-          onClose={handleMessageModalClose}
-        />
-
-      </SafeAreaView>
-    </LinearGradient>
+          {/* Message Modal */}
+          <MessageModal
+            visible={messageModal.visible}
+            title={messageModal.title}
+            message={messageModal.message}
+            type={messageModal.type}
+            onClose={handleMessageModalClose}
+          />
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  infoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+  background: {
+    flex: 1,
+    backgroundColor: PRIMARY_BLUE,
+  },
+  gradientBackground: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 5,
+  },
+  headerLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    color: WHITE,
+    fontSize: 22,
+    fontWeight: '700',
+    marginLeft: 10,
+    letterSpacing: 0.5,
+  },
+  infoButton: {
+    padding: 8,
+  },
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    overflow: 'hidden',
+  },
+  infoCard: {},
+  infoCardGradient: {
+    padding: 20,
+    borderRadius: 20,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  infoTitle: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   infoText: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  originalAmount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  originalAmountText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+  },
+  sectionTitle: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 8,
+    letterSpacing: 0.3,
+  },
+  balanceCard: {},
+  balanceCardGradient: {
+    padding: 20,
+    borderRadius: 20,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  balanceLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  balanceAmountContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  balanceAmount: {
+    color: WHITE,
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginRight: 8,
+  },
+  balanceCurrency: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  recipientCard: {},
+  recipientCardGradient: {
+    padding: 20,
+    borderRadius: 20,
+  },
+  recipientHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  recipientLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  recipientInfo: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   sendBackNotice: {
-    color: '#4CAF50',
+    color: SUCCESS_GREEN,
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 8,
   },
-  rulesContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  rulesTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  rulesText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 13,
-    marginBottom: 6,
-    paddingLeft: 10,
-  },
-  switchModeButton: {
-    backgroundColor: 'rgba(255, 167, 38, 0.2)',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FFA726',
-  },
-  switchModeButtonText: {
-    color: '#FFA726',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  suggestionButton: {
-    backgroundColor: 'rgba(255, 167, 38, 0.2)',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#FFA726',
-  },
-  suggestionText: {
-    color: '#FFA726',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  background: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 32,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    letterSpacing: 0.5,
-  },
-  balanceContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  recipientContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  recipientLabel: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
-  },
-  recipientInfo: {
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
   changeRecipientButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
+    alignSelf: 'flex-start',
   },
   changeRecipientText: {
-    color: '#ffffff',
+    color: WHITE,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectRecipientCard: {},
+  selectRecipientCardGradient: {
+    padding: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  selectRecipientText: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  selectRecipientSubtext: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  amountCard: {},
+  amountCardGradient: {
+    padding: 20,
+    borderRadius: 20,
+  },
+  amountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  amountLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
     fontWeight: '500',
-  },
-  amountContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 12,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.5)',
-    paddingBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    marginBottom: 16,
   },
   amountInputContainerError: {
-    borderBottomColor: '#FF6B6B',
+    borderColor: ERROR_RED,
   },
-  currencySymbol: {
-    fontSize: 28,
-    color: '#ffffff',
-    marginRight: 12,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  currencySymbolError: {
-    color: '#FF6B6B',
+  dollarSign: {
+    fontSize: 24,
+    paddingLeft: 16,
+    paddingRight: 8,
+    color: WHITE,
+    fontWeight: '600',
   },
   amountInput: {
     flex: 1,
-    fontSize: 28,
-    color: '#ffffff',
-    paddingVertical: 0,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    includeFontPadding: false,
+    padding: 16,
+    fontSize: 24,
+    color: WHITE,
+    fontWeight: '600',
   },
   amountInputError: {
-    color: '#FF6B6B',
+    color: ERROR_RED,
+  },
+  balanceStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   balanceStatus: {
     fontSize: 14,
-    marginTop: 8,
     fontWeight: '500',
-    textAlign: 'center',
   },
-  scanButton: {
+  suggestionButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  suggestionButtonGradient: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  suggestionText: {
+    color: '#FFA726',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sendButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: PRIMARY_BLUE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  sendButtonGradient: {
+    paddingVertical: 18,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  sendButtonText: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  switchModeButton: {
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
-  sendButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-  scanButtonPressed: {
-    opacity: 0.9,
-  },
-  sendButtonPressed: {
-    opacity: 0.9,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  buttonGradient: {
+  switchModeButtonGradient: {
     paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
-  scanButtonText: {
-    color: '#0136c0',
-    fontSize: 17,
+  switchModeButtonText: {
+    color: WHITE,
+    fontSize: 16,
     fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
-  sendButtonText: {
-    color: '#ffffff',
-    fontSize: 17,
+  rulesContainer: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+  },
+  rulesTitle: {
+    color: WHITE,
+    fontSize: 16,
     fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  disabledButtonText: {
-    color: '#888888',
+  ruleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 12,
+  },
+  ruleText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    flex: 1,
+  },
+  footerSpacer: {
+    height: 20,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
-    backgroundColor: '#0136c0',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: height * 0.8,
   },
-  phoneFormModalContent: {
-    backgroundColor: '#0136c0',
-    padding: 20,
-    borderRadius: 10,
-    width: '90%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButton: {
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  modalButtonText: {
-    color: '#0136c0',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalCancel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    marginTop: 10,
-  },
-  phoneFormInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
-    color: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    width: '100%',
-    marginBottom: 20,
-  },
-  phoneFormButtons: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    gap: 10,
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  phoneFormCancelButton: {
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: PRIMARY_BLUE,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  modalOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  modalOptionInfo: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 15,
-    borderRadius: 10,
+  },
+  modalOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  modalOptionDescription: {
+    fontSize: 13,
+    color: '#666',
+  },
+  modalCloseButton: {
+    marginTop: 20,
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  phoneFormCancelText: {
-    color: '#ffffff',
+  modalCloseText: {
+    color: '#666',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  phoneFormSubmitButton: {
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  modalButtonCancel: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  modalButtonConfirm: {
+    flex: 1,
+    backgroundColor: PRIMARY_BLUE,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  phoneFormSubmitText: {
-    color: '#0136c0',
+  modalButtonTextCancel: {
+    color: '#333',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  modalButtonTextConfirm: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   cameraContainer: {
     flex: 1,
@@ -1504,19 +1767,6 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
-  },
-  closeCameraButton: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
-  },
-  closeCameraText: {
-    color: '#0136c0',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   errorContainer: {
     flex: 1,
@@ -1526,20 +1776,83 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 24,
   },
   permissionButton: {
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+    width: '80%',
+  },
+  permissionButtonGradient: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   permissionButtonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  closeCameraButton: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  closeCameraButtonGradient: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  closeCameraText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  messageModalContent: {
+    backgroundColor: PRIMARY_BLUE,
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  messageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  messageModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: WHITE,
+  },
+  messageModalMessage: {
+    fontSize: 16,
+    color: WHITE,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  messageModalButton: {
+    backgroundColor: WHITE,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  messageModalButtonText: {
+    color: PRIMARY_BLUE,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -13,7 +13,9 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
-  Alert
+  Alert,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
@@ -28,17 +30,26 @@ import {
   getUserTransactions
 } from './supabase';
 import { NotificationService } from './services/notificationService';
+import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-// Reusable custom modal for displaying messages
+const PRIMARY_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const LIGHT_TEXT = "#e9edf9";
+const CARD_BG = "rgba(255, 255, 255, 0.08)";
+const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const SUCCESS_GREEN = "#00C853";
+const ERROR_RED = "#FF5252";
+
+// Message Modal Component - Updated styling
 const MessageModal = ({ visible, title, message, onClose, type = 'info' }) => {
   const getBackgroundColor = () => {
     switch (type) {
-      case 'error': return '#FF6B6B';
-      case 'success': return '#4CAF50';
+      case 'error': return ERROR_RED;
+      case 'success': return SUCCESS_GREEN;
       case 'warning': return '#FFA726';
-      default: return '#0136c0';
+      default: return PRIMARY_BLUE;
     }
   };
 
@@ -50,19 +61,25 @@ const MessageModal = ({ visible, title, message, onClose, type = 'info' }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: getBackgroundColor() }]}>
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
-          <Pressable style={styles.modalButton} onPress={onClose}>
-            <Text style={styles.modalButtonText}>OK</Text>
-          </Pressable>
+        <View style={styles.modalBackdrop} />
+        <View style={[styles.messageModalContent, { backgroundColor: getBackgroundColor() }]}>
+          <View style={styles.messageModalHeader}>
+            <Text style={styles.messageModalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={WHITE} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.messageModalMessage}>{message}</Text>
+          <TouchableOpacity style={styles.messageModalButton} onPress={onClose}>
+            <Text style={styles.messageModalButtonText}>OK</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 };
 
-// Transaction Item Component
+// Transaction Item Component - Updated styling
 const TransactionItem = ({ transaction, userId }) => {
   const formatTransactionAmount = (transaction, userId) => {
     const amount = parseFloat(transaction.amount);
@@ -110,6 +127,13 @@ const TransactionItem = ({ transaction, userId }) => {
 
   return (
     <View style={styles.transactionItem}>
+      <View style={styles.transactionIcon}>
+        <Ionicons 
+          name={transaction.sender_id === userId ? "arrow-up" : "arrow-down"} 
+          size={20} 
+          color={transaction.sender_id === userId ? ERROR_RED : SUCCESS_GREEN} 
+        />
+      </View>
       <View style={styles.transactionInfo}>
         <Text style={styles.transactionType}>
           {getTransactionType(transaction, userId)}
@@ -199,20 +223,20 @@ const ReceiveScreen = () => {
     }, [isFocused])
   );
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
   // Setup notification listener for this screen
   useEffect(() => {
     if (!userId) return;
     
-    console.log('🔔 Setting up notification listener for ReceiveScreen...');
-    
     notificationSubscriptionRef.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📱 ReceiveScreen: Notification received:', notification);
-      
       const { data } = notification.request.content;
       
       if (data.type === 'transaction_received') {
-        console.log('💰 ReceiveScreen: Money received notification');
-        
         // Refresh balance immediately
         refreshBalance();
         
@@ -227,7 +251,6 @@ const ReceiveScreen = () => {
               { 
                 text: "Go to Home Now", 
                 onPress: () => {
-                  console.log('🏠 Navigating to Home from notification alert');
                   navigation.navigate('Home');
                   setHasShownAutoNavigateAlert(false);
                 }
@@ -236,11 +259,8 @@ const ReceiveScreen = () => {
                 text: "Stay Here", 
                 style: "cancel",
                 onPress: () => {
-                  console.log('✅ Staying on Receive screen');
                   setHasShownAutoNavigateAlert(false);
-                  
-                  // Still auto-navigate after longer delay
-                  scheduleAutoNavigation(10000); // 10 seconds
+                  scheduleAutoNavigation(10000);
                 }
               }
             ]
@@ -261,33 +281,22 @@ const ReceiveScreen = () => {
 
   // Schedule auto-navigation function
   const scheduleAutoNavigation = useCallback((delay = 5000) => {
-    console.log(`⏳ Scheduling auto-navigation to Home in ${delay}ms...`);
-    
-    // Clear any existing timeout
     if (autoNavigateTimeoutRef.current) {
       clearTimeout(autoNavigateTimeoutRef.current);
     }
     
-    // Set new timeout
     autoNavigateTimeoutRef.current = setTimeout(() => {
-      console.log('🏠 Auto-navigating to Home from ReceiveScreen...');
-      
       if (navigation.isFocused()) {
         navigation.navigate('Home');
-      } else {
-        console.log('⚠️ Not on Receive screen, skipping auto-navigation');
       }
     }, delay);
   }, [navigation]);
 
   const checkAuthentication = async () => {
     try {
-      console.log('🔐 Checking authentication for Receive screen...');
-      
       const sessionResult = await getUserSession();
       
       if (!sessionResult.success || !sessionResult.user) {
-        console.error("❌ No authenticated user found");
         showMessage('Authentication Required', 'Please login to access this feature.', 'error');
         
         setTimeout(() => {
@@ -299,7 +308,6 @@ const ReceiveScreen = () => {
         return;
       }
 
-      console.log("✅ User authenticated:", sessionResult.user.id);
       setUserId(sessionResult.user.id);
       setUserPhone(sessionResult.user.phone || '');
       setAuthChecked(true);
@@ -307,7 +315,6 @@ const ReceiveScreen = () => {
       await fetchUserData(sessionResult.user.id);
       
     } catch (error) {
-      console.error('❌ Authentication check failed:', error);
       showMessage('Error', 'Authentication check failed. Please login again.', 'error');
       
       setTimeout(() => {
@@ -324,8 +331,6 @@ const ReceiveScreen = () => {
     try {
       if (showLoading) setLoading(true);
       
-      console.log('📱 Fetching user profile for:', userId);
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('full_name, phone, balance')
@@ -333,18 +338,13 @@ const ReceiveScreen = () => {
         .single();
       
       if (error) {
-        console.error('❌ Error fetching profile:', error);
-        
         if (error.code === 'PGRST116') {
-          console.log('📝 Creating new profile for user...');
           await createUserProfile(userId);
           return;
         }
-        
         throw error;
       }
       
-      console.log('✅ Profile data loaded:', data);
       setBalance(data.balance || 0);
       setUserData({
         name: data.full_name || '',
@@ -360,7 +360,6 @@ const ReceiveScreen = () => {
       setupRealtimeSubscriptions(userId);
       
     } catch (error) {
-      console.error('❌ Error fetching user data:', error);
       showMessage('Error', 'Failed to load user data. Please try again.', 'error');
     } finally {
       if (showLoading) {
@@ -372,8 +371,6 @@ const ReceiveScreen = () => {
 
   // Setup real-time subscriptions with auto-navigation
   const setupRealtimeSubscriptions = (userId) => {
-    console.log('🔔 Setting up real-time subscriptions for user:', userId);
-    
     // Profile changes subscription
     const profileSubscription = supabase
       .channel('user_balance_changes')
@@ -386,11 +383,9 @@ const ReceiveScreen = () => {
           filter: `id=eq.${userId}`
         },
         (payload) => {
-          console.log('🔄 Balance updated:', payload.new.balance);
           setBalance(payload.new.balance || 0);
           updateQRCodeBalance(payload.new.balance || 0);
           
-          // Show notification for balance increase
           if (payload.new.balance > balance) {
             const increase = payload.new.balance - balance;
             if (increase > 0.01) {
@@ -405,7 +400,7 @@ const ReceiveScreen = () => {
       )
       .subscribe();
 
-    // Transactions subscription - UPDATED WITH AUTO-NAVIGATION
+    // Transactions subscription
     const transactionSubscription = supabase
       .channel('user_transaction_changes')
       .on(
@@ -417,11 +412,7 @@ const ReceiveScreen = () => {
           filter: `receiver_id=eq.${userId}`
         },
         async (payload) => {
-          console.log('💰 New incoming transaction:', payload.new);
-          
-          // Prevent multiple triggers
           if (processingReceivedTransaction) {
-            console.log('⚠️ Already processing a received transaction, skipping...');
             return;
           }
           
@@ -431,9 +422,6 @@ const ReceiveScreen = () => {
             await loadRecentTransactions(userId);
             
             if (payload.new.amount > 0) {
-              console.log('🎉 Showing money received alert with auto-navigation');
-              
-              // Show success message with auto-navigation option
               Alert.alert(
                 "Money Received! 🎉", 
                 `You received $${payload.new.amount.toFixed(2)}. Auto-navigating to Home in 5 seconds...`,
@@ -441,7 +429,6 @@ const ReceiveScreen = () => {
                   { 
                     text: "Go to Home Now", 
                     onPress: () => {
-                      console.log('🏠 Navigating to Home immediately');
                       navigation.navigate('Home');
                     }
                   },
@@ -449,18 +436,14 @@ const ReceiveScreen = () => {
                     text: "Stay Here", 
                     style: "cancel",
                     onPress: () => {
-                      console.log('✅ Staying on Receive screen');
-                      // Still auto-navigate after longer delay
                       scheduleAutoNavigation(10000);
                     }
                   }
                 ]
               );
               
-              // Schedule auto-navigation after 5 seconds
               scheduleAutoNavigation(5000);
               
-              // Send local notification
               try {
                 await NotificationService.scheduleTransactionNotification(
                   "💰 Money Received!",
@@ -479,7 +462,6 @@ const ReceiveScreen = () => {
           } catch (error) {
             console.error("Error processing received transaction:", error);
           } finally {
-            // Reset the flag after a delay to prevent rapid triggers
             setTimeout(() => {
               setProcessingReceivedTransaction(false);
             }, 3000);
@@ -499,7 +481,7 @@ const ReceiveScreen = () => {
         dataObj.balance = newBalance;
         setQrData(JSON.stringify(dataObj));
       } catch (error) {
-        console.error('❌ Error updating QR code balance:', error);
+        console.error('Error updating QR code balance:', error);
       }
     }
   };
@@ -508,19 +490,16 @@ const ReceiveScreen = () => {
   const loadRecentTransactions = async (userId) => {
     try {
       setTransactionsLoading(true);
-      console.log('📊 Loading recent transactions for user:', userId);
       
       const result = await getUserTransactions(userId, 5);
       
       if (result.success) {
-        console.log(`✅ Loaded ${result.data?.length || 0} transactions`);
         setRecentTransactions(result.data || []);
       } else {
-        console.log('❌ Error loading transactions:', result.error);
         setRecentTransactions([]);
       }
     } catch (error) {
-      console.error('❌ Error loading transactions:', error);
+      console.error('Error loading transactions:', error);
       setRecentTransactions([]);
     } finally {
       setTransactionsLoading(false);
@@ -530,8 +509,6 @@ const ReceiveScreen = () => {
   // Create user profile if it doesn't exist
   const createUserProfile = async (userId) => {
     try {
-      console.log('👤 Creating new profile for user:', userId);
-      
       const { data, error } = await supabase
         .from('profiles')
         .insert([
@@ -547,11 +524,9 @@ const ReceiveScreen = () => {
         .single();
 
       if (error) {
-        console.error('❌ Profile creation error:', error);
         throw error;
       }
 
-      console.log('✅ Created new profile:', data);
       setBalance(0);
       setUserData({
         name: 'User',
@@ -560,16 +535,9 @@ const ReceiveScreen = () => {
       setIsUserLoaded(true);
 
     } catch (error) {
-      console.error('❌ Error creating profile:', error);
       showMessage('Error', 'Failed to create user profile. Please try again.', 'error');
     }
   };
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, [navigation]);
 
   const generateQRCode = (name, phone, currentBalance) => {
     const data = JSON.stringify({
@@ -582,7 +550,6 @@ const ReceiveScreen = () => {
     });
     
     setQrData(data);
-    console.log('📱 QR Code generated for:', name);
   };
 
   const handleGenerateCode = async () => {
@@ -611,8 +578,6 @@ const ReceiveScreen = () => {
     
     setProfileLoading(true);
     try {
-      console.log('🔄 Updating profile for user:', userId);
-      
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -623,7 +588,6 @@ const ReceiveScreen = () => {
         .eq('id', userId);
       
       if (error) {
-        console.error('❌ Supabase update error:', error);
         throw error;
       }
       
@@ -633,7 +597,6 @@ const ReceiveScreen = () => {
       showMessage('Success', 'Profile updated successfully', 'success');
       
     } catch (error) {
-      console.error('❌ Error updating profile:', error);
       showMessage('Error', error.message || 'Failed to update profile', 'error');
     } finally {
       setProfileLoading(false);
@@ -653,8 +616,6 @@ const ReceiveScreen = () => {
     try {
       if (!userId) return;
       
-      console.log('🔄 Refreshing balance for user:', userId);
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('balance')
@@ -663,10 +624,9 @@ const ReceiveScreen = () => {
       
       if (!error && data) {
         setBalance(data.balance || 0);
-        console.log('✅ Balance refreshed:', data.balance);
       }
     } catch (error) {
-      console.error('❌ Error refreshing balance:', error);
+      console.error('Error refreshing balance:', error);
     }
   };
 
@@ -674,7 +634,6 @@ const ReceiveScreen = () => {
   const onRefresh = useCallback(async () => {
     if (!userId) return;
     
-    console.log('👆 Manual refresh triggered');
     setRefreshing(true);
     await fetchUserData(userId, false);
   }, [userId]);
@@ -691,7 +650,6 @@ const ReceiveScreen = () => {
 
   // Handle phone number input formatting
   const handlePhoneChange = (text) => {
-    // Allow only numbers and common formatting characters
     const cleaned = text.replace(/[^\d+]/g, '');
     setUserData({...userData, phoneNumber: cleaned});
   };
@@ -716,368 +674,400 @@ const ReceiveScreen = () => {
   // Show loading state while checking authentication or fetching data
   if (loading || !authChecked) {
     return (
-      <LinearGradient
-        colors={['#0136c0', '#0136c0']}
-        style={styles.background}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.loadingText}>
-              {!authChecked ? 'Checking authentication...' : 'Loading your profile...'}
-            </Text>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+      <View style={styles.background}>
+        <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
+        <LinearGradient
+          colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+          style={styles.gradientBackground}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={WHITE} />
+              <Text style={styles.loadingText}>
+                {!authChecked ? 'Checking authentication...' : 'Loading your profile...'}
+              </Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
     );
   }
 
   // Show message if user is not authenticated (should be handled by navigation, but as fallback)
   if (!userId) {
     return (
-      <LinearGradient
-        colors={['#0136c0', '#0136c0']}
-        style={styles.background}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>Authentication Required</Text>
-            <Text style={styles.errorSubtext}>Please log in to access this feature</Text>
-            <Pressable 
-              style={styles.loginButton}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={styles.loginButtonText}>Go to Login</Text>
-            </Pressable>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+      <View style={styles.background}>
+        <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
+        <LinearGradient
+          colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+          style={styles.gradientBackground}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.centerContainer}>
+              <Text style={styles.errorText}>Authentication Required</Text>
+              <Text style={styles.errorSubtext}>Please log in to access this feature</Text>
+              <TouchableOpacity 
+                style={styles.loginButton}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <LinearGradient
+                  colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                  style={styles.loginButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.loginButtonText}>Go to Login</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#0136c0', '#0136c0']}
-      style={styles.background}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#ffffff"
-              colors={['#ffffff']}
-              title="Refreshing..."
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Receive Coupons</Text>
-              <Pressable 
-                style={styles.refreshButton}
-                onPress={onRefresh}
-                disabled={refreshing}
-              >
-                {refreshing ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.refreshButtonText}>Refresh</Text>
-                )}
-              </Pressable>
+    <View style={styles.background}>
+      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
+      <LinearGradient
+        colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header - Matching HomeScreen style */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={WHITE} />
+            </TouchableOpacity>
+            <View style={styles.headerLeft}>
+              <Ionicons name="qr-code-outline" size={28} color={WHITE} />
+              <Text style={styles.headerTitle}>Receive Coupons</Text>
             </View>
-            
-            {/* QR Code Card */}
-            <View style={styles.card}>
-              {qrData ? (
-                <>
-                  <Text style={styles.qrInstruction}>SCAN THIS CODE TO RECEIVE COUPONS</Text>
-                  <View style={styles.qrCodeWrapper}>
-                    <QRCode
-                      value={qrData}
-                      size={width * 0.6}
-                      color="#0136c0"
-                      backgroundColor="#ffffff"
-                      logoBackgroundColor="transparent"
-                    />
-                  </View>
-                  <Text style={styles.userInfo}>{userData.name} • {formatDisplayPhone(userData.phoneNumber)}</Text>
-                  <Text style={styles.qrHint}>Hold this code to the scanner</Text>
-                  
-                  {/* Auto-navigation info */}
-                  <View style={styles.autoNavigateInfo}>
-                    <Text style={styles.autoNavigateText}>
-                      💰 Auto-navigates to Home when you receive money
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color={WHITE} />
+              ) : (
+                <Ionicons name="refresh-outline" size={22} color={WHITE} />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={WHITE}
+                colors={[WHITE]}
+                title="Refreshing..."
+                titleColor={WHITE}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          >
+            {/* QR Code Card - Matching HomeScreen card style */}
+            <View style={[styles.card, styles.qrCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.qrCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {qrData ? (
+                  <>
+                    <Text style={styles.qrInstruction}>SCAN THIS CODE TO RECEIVE COUPONS</Text>
+                    <View style={styles.qrCodeWrapper}>
+                      <QRCode
+                        value={qrData}
+                        size={width * 0.5}
+                        color={PRIMARY_BLUE}
+                        backgroundColor={WHITE}
+                        logoBackgroundColor="transparent"
+                      />
+                    </View>
+                    <View style={styles.userInfoContainer}>
+                      <Ionicons name="person-circle-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+                      <Text style={styles.userInfo}>{userData.name} • {formatDisplayPhone(userData.phoneNumber)}</Text>
+                    </View>
+                    <Text style={styles.qrHint}>Hold this code to the scanner</Text>
+                    
+                    {/* Auto-navigation info */}
+                    <View style={styles.autoNavigateInfo}>
+                      <Ionicons name="flash-outline" size={16} color={SUCCESS_GREEN} />
+                      <Text style={styles.autoNavigateText}>
+                        Auto-navigates to Home when you receive money
+                      </Text>
+                    </View>
+                    
+                    {/* Edit Button */}
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={handleRegistration}
+                    >
+                      <LinearGradient
+                        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                        style={styles.editButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Ionicons name="create-outline" size={16} color={WHITE} />
+                        <Text style={styles.editButtonText}>Edit Profile</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.noQRContainer}>
+                      <Ionicons name="qr-code-outline" size={64} color="rgba(255, 255, 255, 0.5)" />
+                      <Text style={styles.noCodeText}>No QR Code Generated</Text>
+                      <Text style={styles.noCodeSubtext}>Set up your profile to generate a QR code</Text>
+                      
+                      {/* Generate Button */}
+                      <TouchableOpacity 
+                        style={styles.generateButton}
+                        onPress={handleRegistration}
+                      >
+                        <LinearGradient
+                          colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                          style={styles.generateButtonGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <Ionicons name="add-circle-outline" size={20} color={WHITE} />
+                          <Text style={styles.generateButtonText}>SET UP PROFILE</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </LinearGradient>
+            </View>
+
+            {/* Balance Card - Matching HomeScreen card style */}
+            <Text style={styles.sectionTitle}>Coupon Balance</Text>
+            <View style={[styles.card, styles.balanceCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.balanceCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.balanceHeader}>
+                  <Ionicons name="wallet-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+                  <Text style={styles.balanceLabel}>Available Balance</Text>
+                </View>
+                <View style={styles.balanceAmountContainer}>
+                  <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
+                  <Text style={styles.balanceCurrency}>USD</Text>
+                </View>
+                <View style={styles.balanceFooter}>
+                  <Text style={styles.balanceFooterText}>Coupon balance available for receiving</Text>
+                  {processingReceivedTransaction && (
+                    <View style={styles.refreshIndicator}>
+                      <ActivityIndicator size="small" color={WHITE} />
+                      <Text style={styles.refreshIndicatorText}>Updating...</Text>
+                    </View>
+                  )}
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* Recent Transactions Card */}
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <View style={[styles.card, styles.transactionsCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.transactionsCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.transactionsHeader}>
+                  <Text style={styles.transactionsTitle}>Recent Activity</Text>
+                  {transactionsLoading && (
+                    <ActivityIndicator size="small" color={WHITE} />
+                  )}
+                </View>
+                
+                {recentTransactions.length > 0 ? (
+                  <>
+                    {recentTransactions.map((transaction) => (
+                      <TransactionItem 
+                        key={transaction.id} 
+                        transaction={transaction} 
+                        userId={userId} 
+                      />
+                    ))}
+                    {recentTransactions.length >= 5 && (
+                      <TouchableOpacity 
+                        style={styles.viewAllButton}
+                        onPress={() => navigation.navigate('TransactionHistory')}
+                      >
+                        <Text style={styles.viewAllText}>View All Transactions</Text>
+                        <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.7)" />
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.noTransactions}>
+                    <Ionicons name="receipt-outline" size={40} color="rgba(255, 255, 255, 0.5)" />
+                    <Text style={styles.noTransactionsText}>No transactions yet</Text>
+                    <Text style={styles.noTransactionsSubtext}>
+                      Your transaction history will appear here
                     </Text>
                   </View>
-                  
-                  {/* Edit Button */}
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.editButton,
-                      pressed && styles.editButtonPressed
-                    ]}
-                    onPress={handleRegistration}
-                  >
-                    <Text style={styles.editButtonText}>Edit Profile</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.noCodeText}>No QR Code Generated</Text>
-                  <Text style={styles.noCodeSubtext}>Set up your profile to generate a QR code</Text>
-                  
-                  {/* Generate Button */}
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.generateButton,
-                      pressed && styles.generateButtonPressed
-                    ]}
-                    onPress={handleRegistration}
-                  >
-                    <LinearGradient
-                      colors={['#ffffff', '#f8f9fa']}
-                      style={styles.buttonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <Text style={styles.generateButtonText}>SET UP PROFILE</Text>
-                    </LinearGradient>
-                  </Pressable>
-                </>
-              )}
-            </View>
-
-            {/* Balance Display */}
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balanceLabel}>YOUR COUPON BALANCE</Text>
-              <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
-              {processingReceivedTransaction && (
-                <View style={styles.refreshIndicator}>
-                  <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={styles.refreshIndicatorText}>Updating...</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Recent Transactions */}
-            <View style={styles.transactionsContainer}>
-              <View style={styles.transactionsHeader}>
-                <Text style={styles.transactionsTitle}>RECENT TRANSACTIONS</Text>
-                {transactionsLoading && (
-                  <ActivityIndicator size="small" color="#ffffff" />
                 )}
-              </View>
-              
-              {recentTransactions.length > 0 ? (
-                <>
-                  {recentTransactions.map((transaction) => (
-                    <TransactionItem 
-                      key={transaction.id} 
-                      transaction={transaction} 
-                      userId={userId} 
-                    />
-                  ))}
-                  {recentTransactions.length >= 5 && (
-                    <Pressable 
-                      style={styles.viewAllButton}
-                      onPress={() => navigation.navigate('TransactionHistory')}
-                    >
-                      <Text style={styles.viewAllText}>View All Transactions</Text>
-                    </Pressable>
-                  )}
-                </>
-              ) : (
-                <View style={styles.noTransactions}>
-                  <Text style={styles.noTransactionsText}>No transactions yet</Text>
-                  <Text style={styles.noTransactionsSubtext}>
-                    Your transaction history will appear here
-                  </Text>
-                </View>
-              )}
+              </LinearGradient>
             </View>
 
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
-              {/* Send Button */}
-              <Pressable 
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  pressed && styles.sendButtonPressed
-                ]}
+              <TouchableOpacity 
+                style={styles.actionButton}
                 onPress={() => navigation.navigate('MyChangeX')}
               >
                 <LinearGradient
-                  colors={['#4CAF50', '#45a049']}
-                  style={styles.buttonGradient}
+                  colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                  style={styles.actionButtonGradient}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
-                  <Text style={styles.sendButtonText}>SEND COUPONS</Text>
+                  <Ionicons name="send-outline" size={24} color={WHITE} />
+                  <Text style={styles.actionButtonText}>SEND COUPONS</Text>
                 </LinearGradient>
-              </Pressable>
+              </TouchableOpacity>
 
-              {/* Go to Home Button */}
-              <Pressable 
-                style={({ pressed }) => [
-                  styles.homeButton,
-                  pressed && styles.homeButtonPressed
-                ]}
+              <TouchableOpacity 
+                style={styles.secondaryButton}
                 onPress={() => navigation.navigate('Home')}
               >
-                <Text style={styles.homeButtonText}>GO TO HOME</Text>
-              </Pressable>
-
-              {/* Transaction History Button */}
-              <Pressable 
-                style={({ pressed }) => [
-                  styles.historyButton,
-                  pressed && styles.historyButtonPressed
-                ]}
-                onPress={() => navigation.navigate('TransactionHistory')}
-              >
-                <Text style={styles.historyButtonText}>VIEW FULL HISTORY</Text>
-              </Pressable>
+                <LinearGradient
+                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                  style={styles.secondaryButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="home-outline" size={20} color={WHITE} />
+                  <Text style={styles.secondaryButtonText}>GO TO HOME</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
 
-        {/* Registration Modal */}
-        <Modal
-          visible={showRegistrationModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowRegistrationModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Update Your Profile</Text>
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor="#999"
-                value={userData.name}
-                onChangeText={(text) => setUserData({...userData, name: text})}
-                autoCapitalize="words"
-                maxLength={50}
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Phone Number (e.g., 0771234567)"
-                placeholderTextColor="#999"
-                value={userData.phoneNumber}
-                onChangeText={handlePhoneChange}
-                keyboardType="phone-pad"
-                maxLength={15}
-              />
-              
-              <Text style={styles.phoneHint}>
-                Enter your Zimbabwean mobile number
-              </Text>
-              
-              <View style={styles.modalButtons}>
-                <Pressable 
-                  style={styles.modalButtonCancel}
-                  onPress={() => setShowRegistrationModal(false)}
-                  disabled={profileLoading}
-                >
-                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                </Pressable>
+            {/* Footer Spacer */}
+            <View style={styles.footerSpacer} />
+          </ScrollView>
+
+          {/* Registration Modal - Updated styling */}
+          <Modal
+            visible={showRegistrationModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowRegistrationModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <Pressable style={styles.modalBackdrop} onPress={() => setShowRegistrationModal(false)} />
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Update Your Profile</Text>
+                  <TouchableOpacity onPress={() => setShowRegistrationModal(false)}>
+                    <Ionicons name="close" size={24} color="#1A1A1A" />
+                  </TouchableOpacity>
+                </View>
                 
-                <Pressable 
-                  style={[styles.modalButtonConfirm, profileLoading && styles.disabledButton]}
-                  onPress={handleGenerateCode}
-                  disabled={profileLoading}
-                >
-                  {profileLoading ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <Text style={styles.modalButtonTextConfirm}>Save Profile</Text>
-                  )}
-                </Pressable>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#999"
+                  value={userData.name}
+                  onChangeText={(text) => setUserData({...userData, name: text})}
+                  autoCapitalize="words"
+                  maxLength={50}
+                />
+                
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g., 0771234567"
+                  placeholderTextColor="#999"
+                  value={userData.phoneNumber}
+                  onChangeText={handlePhoneChange}
+                  keyboardType="phone-pad"
+                  maxLength={15}
+                />
+                
+                <Text style={styles.inputHint}>
+                  Enter your Zimbabwean mobile number
+                </Text>
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={styles.modalButtonCancel}
+                    onPress={() => setShowRegistrationModal(false)}
+                    disabled={profileLoading}
+                  >
+                    <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.modalButtonConfirm, profileLoading && styles.disabledButton]}
+                    onPress={handleGenerateCode}
+                    disabled={profileLoading}
+                  >
+                    {profileLoading ? (
+                      <ActivityIndicator color={WHITE} size="small" />
+                    ) : (
+                      <Text style={styles.modalButtonTextConfirm}>Save Profile</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
 
-        {/* Custom Message Modal */}
-        <MessageModal
-          visible={messageModal.visible}
-          title={messageModal.title}
-          message={messageModal.message}
-          type={messageModal.type}
-          onClose={() => setMessageModal({ ...messageModal, visible: false })}
-        />
-      </SafeAreaView>
-    </LinearGradient>
+          {/* Custom Message Modal */}
+          <MessageModal
+            visible={messageModal.visible}
+            title={messageModal.title}
+            message={messageModal.message}
+            type={messageModal.type}
+            onClose={() => setMessageModal({ ...messageModal, visible: false })}
+          />
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+  background: {
+    flex: 1,
+    backgroundColor: PRIMARY_BLUE,
   },
-  refreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  refreshButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  phoneHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: -8,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  noTransactions: {
-    paddingVertical: 20,
-    alignItems: 'center',
+  gradientBackground: {
+    flex: 1,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  background: {
-    flex: 1,
-  },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
   loadingContainer: {
     flex: 1,
@@ -1085,7 +1075,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     marginTop: 16,
   },
@@ -1098,181 +1088,280 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#ffffff',
+    color: WHITE,
     textAlign: 'center',
     marginBottom: 16,
   },
   errorSubtext: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginBottom: 32,
   },
   loginButton: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
     borderRadius: 12,
-    minWidth: 200,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 200,
+  },
+  loginButtonGradient: {
+    paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
   loginButtonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
-  title: {
-    fontSize: 28,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 5,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    color: WHITE,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 32,
+    marginLeft: 10,
+    letterSpacing: 0.5,
+  },
+  refreshButton: {
+    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    overflow: 'hidden',
+  },
+  qrCard: {},
+  qrCardGradient: {
     padding: 24,
     alignItems: 'center',
-    marginBottom: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   qrInstruction: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0136c0',
+    color: WHITE,
     marginBottom: 20,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   qrCodeWrapper: {
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: 20,
+    backgroundColor: WHITE,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: PRIMARY_BLUE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
   },
   userInfo: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    color: WHITE,
     textAlign: 'center',
   },
   qrHint: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 16,
     textAlign: 'center',
   },
   autoNavigateInfo: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    padding: 10,
+    backgroundColor: 'rgba(0, 200, 83, 0.1)',
+    padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 200, 83, 0.2)',
   },
   autoNavigateText: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: SUCCESS_GREEN,
     fontWeight: '500',
     textAlign: 'center',
   },
   editButton: {
-    backgroundColor: 'rgba(1, 54, 192, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    width: '100%',
   },
-  editButtonPressed: {
-    opacity: 0.8,
+  editButtonGradient: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   editButtonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 14,
     fontWeight: '600',
   },
+  noQRContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   noCodeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: WHITE,
+    marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   noCodeSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 24,
     textAlign: 'center',
+    lineHeight: 20,
   },
   generateButton: {
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
   },
-  generateButtonPressed: {
-    opacity: 0.9,
+  generateButtonGradient: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   generateButtonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
-  balanceContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 20,
-    borderRadius: 12,
+  sectionTitle: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 8,
+    letterSpacing: 0.3,
+  },
+  balanceCard: {},
+  balanceCardGradient: {
+    padding: 24,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
+    gap: 8,
   },
   balanceLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  balanceAmountContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
   },
   balanceAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    color: WHITE,
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginRight: 8,
+  },
+  balanceCurrency: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  balanceFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  balanceFooterText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
   },
   refreshIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+    gap: 8,
   },
   refreshIndicatorText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 12,
-    marginLeft: 8,
     opacity: 0.8,
   },
-  transactionsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  transactionsCard: {},
+  transactionsCardGradient: {
+    padding: 20,
   },
-  transactionsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 12,
-  },
-  transactionItem: {
+  transactionsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  transactionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: WHITE,
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  transactionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   transactionInfo: {
     flex: 1,
@@ -1280,148 +1369,167 @@ const styles = StyleSheet.create({
   transactionType: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ffffff',
+    color: WHITE,
     marginBottom: 2,
   },
   transactionCounterparty: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 2,
   },
   transactionDate: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   transactionAmount: {
     fontSize: 16,
     fontWeight: '600',
   },
   amountSent: {
-    color: '#FF6B6B',
+    color: ERROR_RED,
   },
   amountReceived: {
-    color: '#4CAF50',
+    color: SUCCESS_GREEN,
   },
   viewAllButton: {
     paddingVertical: 12,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   viewAllText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 14,
     fontWeight: '600',
   },
-  noTransactionsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 20,
+  noTransactions: {
+    paddingVertical: 30,
     alignItems: 'center',
-    marginBottom: 24,
   },
   noTransactionsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 8,
+    color: WHITE,
+    marginTop: 12,
+    marginBottom: 4,
   },
   noTransactionsSubtext: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
+    lineHeight: 20,
   },
   actionsContainer: {
     gap: 12,
+    marginTop: 8,
   },
-  sendButton: {
+  actionButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  actionButtonGradient: {
+    paddingVertical: 18,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  actionButtonText: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  secondaryButton: {
     borderRadius: 12,
     overflow: 'hidden',
   },
-  sendButtonPressed: {
-    opacity: 0.9,
+  secondaryButtonGradient: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  sendButtonText: {
-    color: '#ffffff',
+  secondaryButtonText: {
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
-  homeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  homeButtonPressed: {
-    opacity: 0.8,
-  },
-  homeButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  historyButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  historyButtonPressed: {
-    opacity: 0.8,
-  },
-  historyButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  buttonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+  footerSpacer: {
+    height: 20,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: height * 0.8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#0136c0',
-    marginBottom: 20,
-    textAlign: 'center',
+    color: PRIMARY_BLUE,
   },
-  input: {
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  textInput: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: -8,
+    marginBottom: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 24,
   },
   modalButtonCancel: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: '#0136c0',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: PRIMARY_BLUE,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   modalButtonTextCancel: {
@@ -1430,30 +1538,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalButtonTextConfirm: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
   disabledButton: {
     opacity: 0.6,
   },
-  modalMessage: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginBottom: 20,
-    textAlign: 'center',
+  messageModalContent: {
+    backgroundColor: PRIMARY_BLUE,
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    alignSelf: 'center',
   },
-  modalButton: {
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
+  messageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  messageModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: WHITE,
+  },
+  messageModalMessage: {
+    fontSize: 16,
+    color: WHITE,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  messageModalButton: {
+    backgroundColor: WHITE,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  modalButtonText: {
-    color: '#0136c0',
+  messageModalButtonText: {
+    color: PRIMARY_BLUE,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
 

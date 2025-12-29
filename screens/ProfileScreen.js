@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,19 +22,18 @@ import { useNavigation } from '@react-navigation/native';
 import { 
   getUserSession, 
   getUserProfile, 
-  updateUserPIN, 
   signOut,
   formatZimbabwePhone,
   validatePIN,
-  hashPIN,
-  isAuthenticated // Import isAuthenticated
+  isAuthenticated
 } from './supabase';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const PRIMARY_BLUE = "#0136c0";
-const LIGHT_TEXT = "#ffffff";
-const CARD_COLOR = "rgba(255, 255, 255, 0.15)";
+const WHITE = "#ffffff";
+const CARD_BG = "rgba(255, 255, 255, 0.08)";
+const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -42,32 +42,26 @@ const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
   
-  // Modals state
   const [isEditNameModalVisible, setIsEditNameModalVisible] = useState(false);
   const [isChangePINModalVisible, setIsChangePINModalVisible] = useState(false);
   const [isSecurityModalVisible, setIsSecurityModalVisible] = useState(false);
   
-  // Form states
   const [newName, setNewName] = useState('');
   const [currentPIN, setCurrentPIN] = useState('');
   const [newPIN, setNewPIN] = useState('');
   const [confirmPIN, setConfirmPIN] = useState('');
   
-  // Loading states
   const [updatingName, setUpdatingName] = useState(false);
   const [updatingPIN, setUpdatingPIN] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Authentication check
   useEffect(() => {
     const checkAuth = async () => {
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
-        console.log('🔒 ProfileScreen: User not authenticated, redirecting to Login');
         navigation.navigate('Login');
         return;
       }
-      // If authenticated, load user data
       loadUserData();
     };
     
@@ -77,7 +71,6 @@ const ProfileScreen = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      console.log('👤 Loading profile data...');
 
       const sessionResult = await getUserSession();
       if (!sessionResult.success || !sessionResult.user) {
@@ -88,7 +81,6 @@ const ProfileScreen = () => {
 
       setUserData(sessionResult.user);
 
-      // Get user profile
       const profileResult = await getUserProfile(sessionResult.user.id);
       if (profileResult.success) {
         setProfileData(profileResult.data);
@@ -99,10 +91,9 @@ const ProfileScreen = () => {
       }
 
     } catch (error) {
-      console.error('❌ Error loading profile data:', error);
+      console.error('Error loading profile data:', error);
       Alert.alert('Error', 'Failed to load profile data.');
       
-      // If there's an error, check if user is still authenticated
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
         navigation.navigate('Login');
@@ -125,7 +116,6 @@ const ProfileScreen = () => {
 
     setUpdatingName(true);
     try {
-      // Check authentication before proceeding
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
         Alert.alert('Session Expired', 'Please login again.');
@@ -133,10 +123,8 @@ const ProfileScreen = () => {
         return;
       }
 
-      // Simulate API call to update name
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Update local state
       setProfileData(prev => ({ ...prev, full_name: newName.trim() }));
       
       Alert.alert('Success', 'Name updated successfully!');
@@ -171,7 +159,6 @@ const ProfileScreen = () => {
 
     setUpdatingPIN(true);
     try {
-      // Check authentication before proceeding
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
         Alert.alert('Session Expired', 'Please login again.');
@@ -179,11 +166,8 @@ const ProfileScreen = () => {
         return;
       }
 
-      // Simulate PIN verification and update
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // In a real app, you would verify current PIN and update to new PIN
-      // For now, we'll simulate success
       Alert.alert('Success', 'PIN changed successfully!');
       setIsChangePINModalVisible(false);
       setCurrentPIN('');
@@ -201,18 +185,15 @@ const ProfileScreen = () => {
     try {
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
-        // Already logged out, just navigate
         navigation.navigate('Login');
         return;
       }
 
       await signOut();
-      console.log('✅ Logout successful');
       navigation.navigate('Login');
     } catch (error) {
-      console.error('❌ Logout error:', error);
+      console.error('Logout error:', error);
       
-      // If logout fails, still navigate to login
       const authResult = await isAuthenticated();
       if (!authResult.authenticated) {
         navigation.navigate('Login');
@@ -252,7 +233,7 @@ const ProfileScreen = () => {
     <TouchableOpacity style={styles.profileItem} onPress={onPress} disabled={!onPress}>
       <View style={styles.profileItemLeft}>
         <View style={styles.profileItemIcon}>
-          <Ionicons name={icon} size={20} color={PRIMARY_BLUE} />
+          <Ionicons name={icon} size={20} color={WHITE} />
         </View>
         <View style={styles.profileItemInfo}>
           <Text style={styles.profileItemTitle}>{title}</Text>
@@ -267,29 +248,38 @@ const ProfileScreen = () => {
 
   if (loading) {
     return (
-      <LinearGradient
-        colors={['#0136c0', '#0136c0']}
-        style={styles.background}
-      >
-        <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={['#0136c0', '#0136c0']}
+          style={styles.background}
+        >
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
+            <ActivityIndicator size="large" color={WHITE} />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   const displayData = profileData || userData;
 
+  const getFirstInitial = (name) => {
+    if (!name) return "U";
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0) return "U";
+    return trimmedName.charAt(0).toUpperCase();
+  };
+
+  const userInitial = getFirstInitial(displayData?.full_name);
+
   return (
-    <LinearGradient
-      colors={['#0136c0', '#0136c0']}
-      style={styles.background}
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={['#0136c0', '#0136c0']}
+        style={styles.background}
+      >
+        <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
         
         {/* Header */}
         <View style={styles.header}>
@@ -297,7 +287,7 @@ const ProfileScreen = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={24} color={WHITE} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerPlaceholder} />
@@ -308,35 +298,51 @@ const ProfileScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Profile Header */}
-          <View style={styles.profileHeader}>
-            <View style={styles.profileAvatar}>
-              <Ionicons name="person" size={40} color={PRIMARY_BLUE} />
-            </View>
-            <Text style={styles.profileName}>
-              {formatDisplayName(displayData?.full_name)}
-            </Text>
-            <Text style={styles.profilePhone}>
-              {formatDisplayPhone(displayData?.phone)}
-            </Text>
+          {/* Profile Header Card */}
+          <View style={[styles.card, styles.profileHeaderCard]}>
+            <LinearGradient
+              colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+              style={styles.profileGradient}
+            >
+              <View style={styles.profileAvatarContainer}>
+                <LinearGradient
+                  colors={["#0136c0", "#0136c0"]}
+                  style={styles.profileAvatar}
+                >
+                  <Text style={styles.profileInitial}>{userInitial}</Text>
+                </LinearGradient>
+              </View>
+              <Text style={styles.profileName}>
+                {formatDisplayName(displayData?.full_name)}
+              </Text>
+              <Text style={styles.profilePhone}>
+                {formatDisplayPhone(displayData?.phone)}
+              </Text>
+              <View style={styles.profileStatus}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>Active Account</Text>
+              </View>
+            </LinearGradient>
           </View>
 
           {/* Personal Information Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.sectionCard}>
             <ProfileSection
               title="Full Name"
               value={formatDisplayName(displayData?.full_name)}
               onPress={() => setIsEditNameModalVisible(true)}
               icon="person-outline"
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="Phone Number"
               value={formatDisplayPhone(displayData?.phone)}
-              onPress={null} // Phone number shouldn't be editable for security
+              onPress={null}
               icon="call-outline"
               showChevron={false}
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="Account ID"
               value={displayData?.id?.substring(0, 8) + '...' || 'Unknown'}
@@ -347,14 +353,15 @@ const ProfileScreen = () => {
           </View>
 
           {/* Security Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Security</Text>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <View style={styles.sectionCard}>
             <ProfileSection
               title="Change PIN"
               value="••••"
               onPress={() => setIsChangePINModalVisible(true)}
               icon="lock-closed-outline"
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="Security Settings"
               value="Biometric, 2FA"
@@ -364,14 +371,15 @@ const ProfileScreen = () => {
           </View>
 
           {/* Preferences Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.sectionCard}>
             <ProfileSection
               title="Language"
               value="English"
               onPress={null}
               icon="language-outline"
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="Currency"
               value="USD ($)"
@@ -379,6 +387,7 @@ const ProfileScreen = () => {
               icon="cash-outline"
               showChevron={false}
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="Notifications"
               value="Enabled"
@@ -388,14 +397,15 @@ const ProfileScreen = () => {
           </View>
 
           {/* Support Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Support</Text>
+          <Text style={styles.sectionTitle}>Support</Text>
+          <View style={styles.sectionCard}>
             <ProfileSection
               title="Help & Support"
               value="Get help with the app"
               onPress={() => Alert.alert('Help', 'Contact support at help@mychangex.com')}
               icon="help-circle-outline"
             />
+            <View style={styles.divider} />
             <ProfileSection
               title="About MyChangeX"
               value="Version 1.0.0"
@@ -410,14 +420,19 @@ const ProfileScreen = () => {
             onPress={confirmLogout}
             disabled={loggingOut}
           >
-            {loggingOut ? (
-              <ActivityIndicator color="#FF6B6B" />
-            ) : (
-              <>
-                <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
-                <Text style={styles.logoutText}>Logout</Text>
-              </>
-            )}
+            <LinearGradient
+              colors={["rgba(255, 107, 107, 0.3)", "rgba(255, 82, 82, 0.2)"]}
+              style={styles.logoutGradient}
+            >
+              {loggingOut ? (
+                <ActivityIndicator color={WHITE} />
+              ) : (
+                <>
+                  <Ionicons name="log-out-outline" size={20} color={WHITE} />
+                  <Text style={styles.logoutText}>Logout</Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Footer Spacer */}
@@ -432,8 +447,14 @@ const ProfileScreen = () => {
           onRequestClose={() => setIsEditNameModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsEditNameModalVisible(false)} />
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Edit Name</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit Name</Text>
+                <TouchableOpacity onPress={() => setIsEditNameModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                </TouchableOpacity>
+              </View>
               <TextInput
                 style={styles.textInput}
                 placeholder="Enter your full name"
@@ -455,7 +476,7 @@ const ProfileScreen = () => {
                   disabled={updatingName}
                 >
                   {updatingName ? (
-                    <ActivityIndicator color="#ffffff" />
+                    <ActivityIndicator color={WHITE} />
                   ) : (
                     <Text style={styles.modalButtonTextConfirm}>Save</Text>
                   )}
@@ -473,8 +494,19 @@ const ProfileScreen = () => {
           onRequestClose={() => setIsChangePINModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsChangePINModalVisible(false)} />
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Change PIN</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Change PIN</Text>
+                <TouchableOpacity onPress={() => {
+                  setIsChangePINModalVisible(false);
+                  setCurrentPIN('');
+                  setNewPIN('');
+                  setConfirmPIN('');
+                }}>
+                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                </TouchableOpacity>
+              </View>
               
               <Text style={styles.inputLabel}>Current PIN</Text>
               <TextInput
@@ -528,7 +560,7 @@ const ProfileScreen = () => {
                   disabled={updatingPIN}
                 >
                   {updatingPIN ? (
-                    <ActivityIndicator color="#ffffff" />
+                    <ActivityIndicator color={WHITE} />
                   ) : (
                     <Text style={styles.modalButtonTextConfirm}>Change PIN</Text>
                   )}
@@ -546,8 +578,14 @@ const ProfileScreen = () => {
           onRequestClose={() => setIsSecurityModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setIsSecurityModalVisible(false)} />
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Security Settings</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Security Settings</Text>
+                <TouchableOpacity onPress={() => setIsSecurityModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                </TouchableOpacity>
+              </View>
               
               <Text style={styles.modalMessage}>
                 Enhanced security features will be available in future updates.
@@ -567,8 +605,8 @@ const ProfileScreen = () => {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
-    </LinearGradient>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
@@ -578,16 +616,14 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: PRIMARY_BLUE,
   },
   container: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 30,
   },
   loadingContainer: {
     flex: 1,
@@ -595,7 +631,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     marginTop: 16,
   },
@@ -604,37 +640,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 16,
-    paddingBottom: 16,
+    paddingVertical: 15,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
+    color: WHITE,
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
   },
   headerPlaceholder: {
     width: 40,
   },
-  profileHeader: {
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+  },
+  profileHeaderCard: {
+    overflow: 'hidden',
+  },
+  profileGradient: {
+    padding: 24,
+    borderRadius: 20,
     alignItems: 'center',
-    marginBottom: 30,
+  },
+  profileAvatarContainer: {
+    marginBottom: 16,
   },
   profileAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  profileInitial: {
+    color: WHITE,
+    fontSize: 32,
+    fontWeight: '700',
   },
   profileName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#ffffff',
+    color: WHITE,
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -642,28 +694,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-  },
-  section: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
   },
+  profileStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00C853',
+  },
+  statusText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: '600',
     marginBottom: 12,
-    marginLeft: 8,
+    marginTop: 8,
+  },
+  sectionCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   profileItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   profileItemLeft: {
     flexDirection: 'row',
@@ -674,10 +742,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   profileItemInfo: {
     flex: 1,
@@ -685,25 +755,34 @@ const styles = StyleSheet.create({
   profileItemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: WHITE,
     marginBottom: 2,
   },
   profileItemValue: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
   },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginHorizontal: 16,
+  },
   logoutButton: {
+    marginTop: 8,
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  logoutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-    padding: 16,
+    paddingVertical: 16,
     borderRadius: 12,
-    marginTop: 8,
     gap: 8,
   },
   logoutText: {
-    color: '#FF6B6B',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -712,21 +791,31 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 24,
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: height * 0.8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: PRIMARY_BLUE,
-    marginBottom: 20,
-    textAlign: 'center',
   },
   modalMessage: {
     fontSize: 16,
@@ -745,8 +834,8 @@ const styles = StyleSheet.create({
   textInput: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
@@ -758,15 +847,17 @@ const styles = StyleSheet.create({
   modalButtonCancel: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   modalButtonConfirm: {
     flex: 1,
     backgroundColor: PRIMARY_BLUE,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   modalButtonTextCancel: {
@@ -775,7 +866,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalButtonTextConfirm: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
