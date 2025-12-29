@@ -33,18 +33,18 @@ import {
 } from "./supabase";
 import SpendCard from "./SpendCard";
 import { NotificationService } from "./services/notificationService";
-import { useIsFocused } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { useIsFocused } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
-// Updated Color Palette
-const PRIMARY_BLUE = "#0A1F44";
-const ACCENT_BLUE = "#2D5BFF";
-const LIGHT_BLUE = "#4A90E2";
-const WHITE = "#FFFFFF";
-const LIGHT_TEXT = "#F5F7FA";
+// Updated Color Palette with new colors
+const PRIMARY_BLUE = "#0136c0";
+const ACCENT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const LIGHT_TEXT = "#e9edf9";
 const DARK_TEXT = "#1A1A1A";
 const CARD_BG = "rgba(255, 255, 255, 0.08)";
 const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
@@ -56,22 +56,32 @@ const ecocashLogo = require("../assets/ecocash-logo.png");
 const omariLogo = require("../assets/omari.png");
 const mychangexLogo = require("../assets/logo.png");
 
-const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, lastTransaction, setHomeRefreshTrigger }) => {
+const HomeScreen = ({
+  navigation,
+  route,
+  unreadCount = 0,
+  homeRefreshTrigger,
+  lastTransaction,
+  setHomeRefreshTrigger,
+}) => {
   const [isSendModalVisible, setIsSendModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(unreadCount);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] =
+    useState(unreadCount);
   const [showBalance, setShowBalance] = useState(true);
-  
+
   const buttonScale = useState(new Animated.Value(1))[0];
   const balanceOpacity = useRef(new Animated.Value(1)).current;
-  
-  const [processingReceivedTransaction, setProcessingReceivedTransaction] = useState(false);
+
+  const [processingReceivedTransaction, setProcessingReceivedTransaction] =
+    useState(false);
   const [previousBalance, setPreviousBalance] = useState(0);
-  const [hasShownRefreshNotification, setHasShownRefreshNotification] = useState(false);
-  
+  const [hasShownRefreshNotification, setHasShownRefreshNotification] =
+    useState(false);
+
   const isFocused = useIsFocused();
   const subscriptionsRef = useRef([]);
   const balanceUpdateTimeoutRef = useRef(null);
@@ -84,7 +94,10 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
   // Handle refresh triggers from App.js
   useEffect(() => {
     if (homeRefreshTrigger > 0) {
-      console.log('🔄 HomeScreen: Refresh trigger received from App:', homeRefreshTrigger);
+      console.log(
+        "🔄 HomeScreen: Refresh trigger received from App:",
+        homeRefreshTrigger
+      );
       handleAutoRefresh();
     }
   }, [homeRefreshTrigger, lastTransaction, isFocused]);
@@ -146,7 +159,6 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
       if (sessionResult.user?.id) {
         await loadUnreadNotificationsCount(sessionResult.user.id);
       }
-
     } catch (error) {
       console.error("Error loading user data:", error);
       Alert.alert(
@@ -170,20 +182,22 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
 
   const loadUnreadNotificationsCount = async (userId) => {
     try {
-      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-        console.error('❌ Invalid userId provided:', userId);
+      if (!userId || typeof userId !== "string" || userId.trim() === "") {
+        console.error("❌ Invalid userId provided:", userId);
         return;
       }
-      
+
       const transactionsResult = await getUserTransactions(userId, 50);
-      
+
       if (transactionsResult.success) {
-        console.log(`✅ Loaded ${transactionsResult.data?.length || 0} transactions`);
+        console.log(
+          `✅ Loaded ${transactionsResult.data?.length || 0} transactions`
+        );
       } else {
-        console.log('❌ Error loading transactions:', transactionsResult.error);
+        console.log("❌ Error loading transactions:", transactionsResult.error);
       }
     } catch (error) {
-      console.error('❌ Error loading notifications count:', error);
+      console.error("❌ Error loading notifications count:", error);
     }
   };
 
@@ -191,8 +205,8 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
     try {
       if (!userData?.phone) return;
 
-      console.log('🔄 Refreshing balance for user:', userData.phone);
-      
+      console.log("🔄 Refreshing balance for user:", userData.phone);
+
       const { data: profile, error } = await getUserProfileByPhone(
         userData.phone
       );
@@ -200,7 +214,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
       if (!error && profile) {
         const oldBalance = profileData?.balance || userData?.balance || 0;
         const newBalance = profile.balance || 0;
-        
+
         setProfileData((prevData) => ({
           ...prevData,
           balance: newBalance,
@@ -210,12 +224,14 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
           ...prevData,
           balance: newBalance,
         }));
-        
-        console.log(`✅ Balance refreshed: $${oldBalance.toFixed(2)} → $${newBalance.toFixed(2)}`);
-        
+
+        console.log(
+          `✅ Balance refreshed: $${oldBalance.toFixed(2)} → $${newBalance.toFixed(2)}`
+        );
+
         return newBalance;
       } else if (error) {
-        console.error('❌ Error refreshing balance:', error);
+        console.error("❌ Error refreshing balance:", error);
       }
     } catch (error) {
       console.error("Error refreshing balance:", error);
@@ -224,25 +240,25 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
   };
 
   const handleAutoRefresh = useCallback(() => {
-    console.log('🔄 HomeScreen: Performing auto-refresh...');
-    
+    console.log("🔄 HomeScreen: Performing auto-refresh...");
+
     if (balanceUpdateTimeoutRef.current) {
       clearTimeout(balanceUpdateTimeoutRef.current);
     }
-    
+
     balanceUpdateTimeoutRef.current = setTimeout(() => {
       refreshBalance();
       if (userData?.id) {
         loadUnreadNotificationsCount(userData.id);
       }
-      
+
       setRefreshing(true);
       setTimeout(() => setRefreshing(false), 1000);
     }, 500);
   }, [userData?.id]);
 
   const onRefresh = useCallback(() => {
-    console.log('👆 Manual refresh triggered');
+    console.log("👆 Manual refresh triggered");
     setRefreshing(true);
     loadUserData();
   }, []);
@@ -348,8 +364,8 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
       if (balanceUpdateTimeoutRef.current) {
         clearTimeout(balanceUpdateTimeoutRef.current);
       }
-      
-      subscriptionsRef.current.forEach(subscription => {
+
+      subscriptionsRef.current.forEach((subscription) => {
         if (subscription) {
           supabase.removeChannel(subscription);
         }
@@ -378,12 +394,14 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
             {unreadNotificationsCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
-                  {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  {unreadNotificationsCount > 9
+                    ? "9+"
+                    : unreadNotificationsCount}
                 </Text>
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate("Profile")}
           >
@@ -422,7 +440,11 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
               <Text style={styles.profileUsername}>Loading...</Text>
               <Text style={styles.profilePhone}>Please wait</Text>
             </View>
-            <Feather name="chevron-right" size={20} color="rgba(255, 255, 255, 0.5)" />
+            <Feather
+              name="chevron-right"
+              size={20}
+              color="rgba(255, 255, 255, 0.5)"
+            />
           </View>
         </TouchableOpacity>
       );
@@ -441,9 +463,15 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileUsername}>No Profile Data</Text>
-              <Text style={styles.profilePhone}>Please check your connection</Text>
+              <Text style={styles.profilePhone}>
+                Please check your connection
+              </Text>
             </View>
-            <Feather name="chevron-right" size={20} color="rgba(255, 255, 255, 0.5)" />
+            <Feather
+              name="chevron-right"
+              size={20}
+              color="rgba(255, 255, 255, 0.5)"
+            />
           </View>
         </TouchableOpacity>
       );
@@ -460,7 +488,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
       >
         <View style={styles.profileContainer}>
           <LinearGradient
-            colors={[ACCENT_BLUE, LIGHT_BLUE]}
+            colors={["#0136c0", "#0136c0"]}
             style={styles.profileIconCircle}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -475,7 +503,11 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
               {formatDisplayPhone(displayData.phone) || "No phone number"}
             </Text>
           </View>
-          <Feather name="chevron-right" size={20} color="rgba(255, 255, 255, 0.5)" />
+          <Feather
+            name="chevron-right"
+            size={20}
+            color="rgba(255, 255, 255, 0.5)"
+          />
         </View>
       </TouchableOpacity>
     );
@@ -492,46 +524,92 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
     return (
       <View style={[styles.card, styles.balanceCard]}>
         <LinearGradient
-          colors={['rgba(45, 91, 255, 0.15)', 'rgba(74, 144, 226, 0.1)']}
+          colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
           style={styles.balanceGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
+          {/* Balance Header with Eye Icon */}
           <View style={styles.balanceHeader}>
-            <Text style={styles.balanceLabel}>Total Balance</Text>
-            <TouchableOpacity onPress={toggleBalanceVisibility}>
-              <Ionicons 
-                name={showBalance ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color="rgba(255, 255, 255, 0.7)" 
+            <View style={styles.balanceLabelContainer}>
+              <Ionicons
+                name="wallet-outline"
+                size={16}
+                color="rgba(255, 255, 255, 0.7)"
+              />
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={toggleBalanceVisibility}
+            >
+              <Ionicons
+                name={showBalance ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="rgba(255, 255, 255, 0.7)"
               />
             </TouchableOpacity>
           </View>
-          
-          <Animated.View style={{ opacity: balanceOpacity }}>
-            <Text style={styles.balanceAmount}>
-              ${showBalance ? parseFloat(balance).toFixed(2) : "•••••"}
-            </Text>
-          </Animated.View>
-          
+
+          {/* Main Balance Amount with Glow Effect */}
+          <View style={styles.balanceAmountContainer}>
+            <Animated.View
+              style={[styles.balanceGlow, { opacity: balanceOpacity }]}
+            >
+              <LinearGradient
+                colors={["rgba(1, 54, 192, 0.3)", "transparent"]}
+                style={styles.glowEffect}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+            </Animated.View>
+            <Animated.View style={{ opacity: balanceOpacity }}>
+              <Text style={styles.balanceAmount}>
+                ${showBalance ? parseFloat(balance).toFixed(2) : "•••••"}
+              </Text>
+              <Text style={styles.balanceCurrency}>USD</Text>
+            </Animated.View>
+          </View>
+
+          {/* Balance Change Indicator */}
           {showBalance && (showIncrease || showDecrease) && (
-            <View style={[
-              styles.balanceChangeIndicator,
-              showIncrease ? styles.balanceIncrease : styles.balanceDecrease
-            ]}>
-              <Ionicons 
-                name={showIncrease ? "trending-up" : "trending-down"} 
-                size={14} 
-                color={WHITE} 
+            <View
+              style={[
+                styles.balanceChangeContainer,
+                showIncrease ? styles.balanceIncrease : styles.balanceDecrease,
+              ]}
+            >
+              <Ionicons
+                name={showIncrease ? "trending-up" : "trending-down"}
+                size={14}
+                color={WHITE}
               />
               <Text style={styles.balanceChangeText}>
-                {showIncrease ? '+' : ''}${Math.abs(balanceChange).toFixed(2)}
+                {showIncrease ? "+" : ""}${Math.abs(balanceChange).toFixed(2)}
+              </Text>
+              <View style={styles.balanceChangeSeparator} />
+              <Text style={styles.balanceChangeLabel}>
+                {showIncrease ? "This week" : "This week"}
               </Text>
             </View>
           )}
-          
-          <TouchableOpacity 
-            style={styles.refreshButton} 
+
+          {/* Status Indicator */}
+          <View style={styles.statusIndicator}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
+              ]}
+            />
+            <Text style={styles.statusText}>
+              {showIncrease ? "Active" : "Updated"}
+            </Text>
+          </View>
+
+          {/* Refresh Button */}
+          <TouchableOpacity
+            style={styles.refreshButton}
             onPress={onRefresh}
             disabled={refreshing}
           >
@@ -540,7 +618,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
             ) : (
               <>
                 <Ionicons name="refresh-outline" size={16} color={WHITE} />
-                <Text style={styles.refreshText}>Refresh Balance</Text>
+                <Text style={styles.refreshText}>Refresh</Text>
               </>
             )}
           </TouchableOpacity>
@@ -560,7 +638,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
           onPress={openSendModal}
         >
           <LinearGradient
-            colors={[ACCENT_BLUE, LIGHT_BLUE]}
+            colors={["#0136c0", "#0136c0"]}
             style={styles.actionCircle}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -576,7 +654,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
           onPress={handleReceive}
         >
           <LinearGradient
-            colors={[SUCCESS_GREEN, '#00E676']}
+            colors={[SUCCESS_GREEN, "#00E676"]}
             style={styles.actionCircle}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -661,7 +739,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
             onPress={() => handlePlatformSelect("mychangex")}
           >
             <LinearGradient
-              colors={[PRIMARY_BLUE, ACCENT_BLUE]}
+              colors={["#0136c0", "#0136c0"]}
               style={styles.platformIconContainer}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -694,12 +772,9 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
 
   return (
     <View style={styles.background}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={PRIMARY_BLUE}
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
       <LinearGradient
-        colors={[PRIMARY_BLUE, '#1A2B5C']}
+        colors={["#0136c0", "#0136c0"]}
         style={styles.gradientBackground}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -747,7 +822,7 @@ const HomeScreen = ({ navigation, route, unreadCount = 0, homeRefreshTrigger, la
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: "#0136c0",
   },
   gradientBackground: {
     flex: 1,
@@ -790,7 +865,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8,
-    position: 'relative',
+    position: "relative",
   },
   badge: {
     position: "absolute",
@@ -803,7 +878,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: PRIMARY_BLUE,
+    borderColor: "#0136c0",
   },
   badgeText: {
     color: WHITE,
@@ -850,13 +925,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "400",
   },
+  // Balance Card Styles
   balanceCard: {
     padding: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
+    shadowColor: "#0136c0",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 15,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   balanceGradient: {
     padding: 24,
     borderRadius: 20,
+    position: "relative",
   },
   balanceHeader: {
     flexDirection: "row",
@@ -864,54 +948,132 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  balanceLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   balanceLabel: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255, 255, 255, 0.7)",
     fontSize: 14,
     fontWeight: "500",
     letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  eyeButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  balanceAmountContainer: {
+    position: "relative",
+    marginBottom: 16,
+    alignItems: "flex-start",
+  },
+  balanceGlow: {
+    position: "absolute",
+    top: -20,
+    left: -20,
+    right: -20,
+    height: 100,
+  },
+  glowEffect: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
   },
   balanceAmount: {
     color: WHITE,
-    fontSize: 44,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    fontSize: 48,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    textShadowColor: "rgba(255, 255, 255, 0.2)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
-  balanceChangeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
+  balanceCurrency: {
+    color: "rgba(255, 255, 255, 0.5)",
+    fontSize: 16,
+    fontWeight: "500",
+    marginTop: 4,
+    letterSpacing: 1,
+  },
+  balanceChangeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: "flex-start",
     marginBottom: 20,
+    gap: 8,
   },
   balanceIncrease: {
-    backgroundColor: 'rgba(0, 200, 83, 0.2)',
+    backgroundColor: "rgba(0, 200, 83, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 200, 83, 0.3)",
   },
   balanceDecrease: {
-    backgroundColor: 'rgba(255, 82, 82, 0.2)',
+    backgroundColor: "rgba(255, 82, 82, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 82, 82, 0.3)",
   },
   balanceChangeText: {
     color: WHITE,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  balanceChangeSeparator: {
+    width: 1,
+    height: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    marginHorizontal: 4,
+  },
+  balanceChangeLabel: {
+    color: "rgba(255, 255, 255, 0.7)",
     fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 6,
+    fontWeight: "400",
+  },
+  statusIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#4CAF50",
+  },
+  statusText: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.3,
   },
   refreshButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 12,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   refreshText: {
     color: WHITE,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     marginLeft: 8,
+    letterSpacing: 0.3,
   },
   quickActionsWrapper: {
     marginTop: 24,
@@ -957,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
     backgroundColor: WHITE,
@@ -977,7 +1139,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: PRIMARY_BLUE,
+    color: "#0136c0",
   },
   platformItem: {
     flexDirection: "row",
@@ -987,7 +1149,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginVertical: 6,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
   },
   platformIconContainer: {
     width: 52,
@@ -1022,13 +1184,13 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     marginTop: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
   modalCloseText: {
-    color: '#666',
+    color: "#666",
     fontSize: 16,
     fontWeight: "600",
   },
