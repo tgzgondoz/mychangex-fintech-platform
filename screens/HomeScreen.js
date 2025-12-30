@@ -40,14 +40,15 @@ import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 const { width, height } = Dimensions.get("window");
 const PRIMARY_BLUE = "#0136c0";
 const ACCENT_BLUE = "#0136c0";
-const LIGHT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#f5f8ff";
 const WHITE = "#ffffff";
-const LIGHT_TEXT = "#e9edf9";
+const LIGHT_TEXT = "#666666";
 const DARK_TEXT = "#1A1A1A";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
 const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
+const BACKGROUND_COLOR = "#f8f9fa";
 const ecocashLogo = require("../assets/ecocash-logo.png");
 const omariLogo = require("../assets/omari.png");
 const mychangexLogo = require("../assets/logo.png");
@@ -326,7 +327,7 @@ const HomeScreen = ({
     return (
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="wallet-outline" size={28} color={WHITE} />
+          <Ionicons name="wallet-outline" size={28} color={PRIMARY_BLUE} />
           <Text style={styles.headerTitle}>MyChangeX</Text>
         </View>
         <View style={styles.headerRight}>
@@ -334,7 +335,7 @@ const HomeScreen = ({
             style={styles.iconButton}
             onPress={handleNotificationPress}
           >
-            <Ionicons name="notifications-outline" size={24} color={WHITE} />
+            <Ionicons name="notifications-outline" size={24} color={DARK_TEXT} />
             {unreadNotificationsCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -349,7 +350,7 @@ const HomeScreen = ({
             style={styles.iconButton}
             onPress={() => navigation.navigate("Profile")}
           >
-            <Ionicons name="person-outline" size={24} color={WHITE} />
+            <Ionicons name="person-outline" size={24} color={DARK_TEXT} />
           </TouchableOpacity>
         </View>
       </View>
@@ -384,7 +385,7 @@ const HomeScreen = ({
             <Feather
               name="chevron-right"
               size={20}
-              color="rgba(255, 255, 255, 0.5)"
+              color="#999"
             />
           </View>
         </TouchableOpacity>
@@ -410,7 +411,7 @@ const HomeScreen = ({
             <Feather
               name="chevron-right"
               size={20}
-              color="rgba(255, 255, 255, 0.5)"
+              color="#999"
             />
           </View>
         </TouchableOpacity>
@@ -425,14 +426,16 @@ const HomeScreen = ({
         activeOpacity={0.9}
       >
         <View style={styles.profileContainer}>
-          <LinearGradient
-            colors={["#0136c0", "#0136c0"]}
-            style={styles.profileIconCircle}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.profileInitial}>{userInitial}</Text>
-          </LinearGradient>
+          <View style={styles.profileIconCircle}>
+            <LinearGradient
+              colors={["#0136c0", "#0136c0"]}
+              style={styles.profileIconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.profileInitial}>{userInitial}</Text>
+            </LinearGradient>
+          </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileUsername} numberOfLines={1}>
               {displayData.full_name || "User"}
@@ -444,7 +447,7 @@ const HomeScreen = ({
           <Feather
             name="chevron-right"
             size={20}
-            color="rgba(255, 255, 255, 0.5)"
+            color="#999"
           />
         </View>
       </TouchableOpacity>
@@ -459,18 +462,13 @@ const HomeScreen = ({
     const showDecrease = balanceChange < -0.01;
     return (
       <View style={[styles.card, styles.balanceCard]}>
-        <LinearGradient
-          colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-          style={styles.balanceGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.balanceContent}>
           <View style={styles.balanceHeader}>
             <View style={styles.balanceLabelContainer}>
               <Ionicons
                 name="wallet-outline"
                 size={16}
-                color="rgba(255, 255, 255, 0.7)"
+                color={LIGHT_TEXT}
               />
               <Text style={styles.balanceLabel}>Total Balance</Text>
             </View>
@@ -481,21 +479,11 @@ const HomeScreen = ({
               <Ionicons
                 name={showBalance ? "eye-outline" : "eye-off-outline"}
                 size={20}
-                color="rgba(255, 255, 255, 0.7)"
+                color={LIGHT_TEXT}
               />
             </TouchableOpacity>
           </View>
           <View style={styles.balanceAmountContainer}>
-            <Animated.View
-              style={[styles.balanceGlow, { opacity: balanceOpacity }]}
-            >
-              <LinearGradient
-                colors={["rgba(1, 54, 192, 0.3)", "transparent"]}
-                style={styles.glowEffect}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-              />
-            </Animated.View>
             <Animated.View
               style={{
                 opacity: balanceOpacity,
@@ -530,32 +518,34 @@ const HomeScreen = ({
               </Text>
             </View>
           )}
-          <View style={styles.statusIndicator}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
-              ]}
-            />
-            <Text style={styles.statusText}>
-              {showIncrease ? "Active" : "Updated"}
-            </Text>
+          <View style={styles.balanceFooter}>
+            <View style={styles.statusIndicator}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
+                ]}
+              />
+              <Text style={styles.statusText}>
+                {showIncrease ? "Active" : "Updated"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color={PRIMARY_BLUE} />
+              ) : (
+                <>
+                  <Ionicons name="refresh-outline" size={16} color={PRIMARY_BLUE} />
+                  <Text style={styles.refreshText}>Refresh</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.refreshButton}
-            onPress={onRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <ActivityIndicator size="small" color={WHITE} />
-            ) : (
-              <>
-                <Ionicons name="refresh-outline" size={16} color={WHITE} />
-                <Text style={styles.refreshText}>Refresh</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </LinearGradient>
+        </View>
       </View>
     );
   };
@@ -569,14 +559,9 @@ const HomeScreen = ({
           activeOpacity={0.8}
           onPress={openSendModal}
         >
-          <LinearGradient
-            colors={["#0136c0", "#0136c0"]}
-            style={styles.actionCircle}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={[styles.actionCircle, { backgroundColor: PRIMARY_BLUE }]}>
             <MaterialIcons name="send" size={28} color={WHITE} />
-          </LinearGradient>
+          </View>
           <Text style={styles.actionText}>Send</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -584,14 +569,9 @@ const HomeScreen = ({
           activeOpacity={0.8}
           onPress={handleReceive}
         >
-          <LinearGradient
-            colors={[SUCCESS_GREEN, "#00E676"]}
-            style={styles.actionCircle}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={[styles.actionCircle, { backgroundColor: SUCCESS_GREEN }]}>
             <MaterialIcons name="call-received" size={28} color={WHITE} />
-          </LinearGradient>
+          </View>
           <Text style={styles.actionText}>Receive</Text>
         </TouchableOpacity>
       </View>
@@ -665,18 +645,13 @@ const HomeScreen = ({
             ]}
             onPress={() => handlePlatformSelect("mychangex")}
           >
-            <LinearGradient
-              colors={["#0136c0", "#0136c0"]}
-              style={styles.platformIconContainer}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
+            <View style={[styles.platformIconContainer, { backgroundColor: PRIMARY_BLUE }]}>
               <Image
                 source={mychangexLogo}
                 style={[styles.platformImage, styles.mychangexLogo]}
                 resizeMode="contain"
               />
-            </LinearGradient>
+            </View>
             <View style={styles.platformInfo}>
               <Text style={styles.platformName}>MyChangeX</Text>
               <Text style={styles.platformDescription}>
@@ -698,60 +673,53 @@ const HomeScreen = ({
 
   return (
     <View style={styles.background}>
-      <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
-      <LinearGradient
-        colors={["#0136c0", "#0136c0"]}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <HeaderBar />
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={WHITE}
-                colors={[WHITE]}
-                title="Refreshing balance..."
-                titleColor={WHITE}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.mainContent}>
-              <ProfileCard />
-              <BalanceCard />
-              <QuickActions />
-              <SpendCard
-                buttonScale={buttonScale}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-                onServiceSelect={handleServiceSelect}
-                userBalance={profileData?.balance || userData?.balance || 0}
-                navigation={navigation}
-                buttonText="Use your $0.30 to pay for bills, airtime, event tickets on Spend MyChangeX"
-              />
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </LinearGradient>
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+      <SafeAreaView style={styles.safeArea}>
+        <HeaderBar />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={PRIMARY_BLUE}
+              colors={[PRIMARY_BLUE]}
+              title="Refreshing balance..."
+              titleColor={DARK_TEXT}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mainContent}>
+            <ProfileCard />
+            <BalanceCard />
+            <QuickActions />
+            <SpendCard
+              buttonScale={buttonScale}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              onServiceSelect={handleServiceSelect}
+              userBalance={profileData?.balance || userData?.balance || 0}
+              navigation={navigation}
+              buttonText="Use your $0.30 to pay for bills, airtime, event tickets on Spend MyChangeX"
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
       <SendPlatformModal />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: "#0136c0" },
-  gradientBackground: { flex: 1 },
+  background: { flex: 1, backgroundColor: BACKGROUND_COLOR },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    backgroundColor: BACKGROUND_COLOR,
   },
   scrollContent: { flexGrow: 1, paddingBottom: 30 },
-  mainContent: { flex: 1, paddingHorizontal: 20 },
+  mainContent: { flex: 1, paddingHorizontal: 20, backgroundColor: BACKGROUND_COLOR },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -759,14 +727,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 5,
+    backgroundColor: BACKGROUND_COLOR,
   },
   headerLeft: { flexDirection: "row", alignItems: "center" },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 22,
     fontWeight: "700",
     marginLeft: 10,
-    letterSpacing: 0.5,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 15 },
   iconButton: { padding: 8, position: "relative" },
@@ -780,13 +748,11 @@ const styles = StyleSheet.create({
     height: 18,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#0136c0",
   },
   badgeText: { color: WHITE, fontSize: 10, fontWeight: "bold" },
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
@@ -804,32 +770,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
+    overflow: 'hidden',
+  },
+  profileIconGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: "center",
+    alignItems: "center",
   },
   profileInitial: { color: WHITE, fontSize: 22, fontWeight: "700" },
   profileInfo: { flex: 1 },
   profileUsername: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 4,
   },
   profilePhone: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: "400",
   },
   balanceCard: {
     padding: 0,
     overflow: "hidden",
-    shadowColor: "#0136c0",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 15,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: CARD_BORDER,
   },
-  balanceGradient: { padding: 24, borderRadius: 20, position: "relative" },
+  balanceContent: { padding: 24, borderRadius: 16 },
   balanceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -838,48 +806,32 @@ const styles = StyleSheet.create({
   },
   balanceLabelContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
   balanceLabel: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: "500",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   eyeButton: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: "transparent",
+    backgroundColor: "#f5f5f5",
     width: 36,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
   },
   balanceAmountContainer: {
-    position: "relative",
     marginBottom: 16,
     alignItems: "flex-start",
   },
-  balanceGlow: {
-    position: "absolute",
-    top: -20,
-    left: -20,
-    right: -20,
-    height: 100,
-  },
-  glowEffect: { width: "100%", height: "100%", borderRadius: 20 },
   balanceAmount: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 48,
     fontWeight: "800",
-    letterSpacing: -0.5,
-    textShadowColor: "rgba(255, 255, 255, 0.2)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
   },
   balanceCurrency: {
-    color: "rgba(255, 255, 255, 0.5)",
+    color: LIGHT_TEXT,
     fontSize: 16,
     fontWeight: "500",
-    letterSpacing: 1,
   },
   balanceChangeContainer: {
     flexDirection: "row",
@@ -902,26 +854,29 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 82, 82, 0.3)",
   },
   balanceChangeText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.3,
   },
   balanceChangeSeparator: {
     width: 1,
     height: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     marginHorizontal: 4,
   },
   balanceChangeLabel: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 13,
     fontWeight: "400",
+  },
+  balanceFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   statusIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
     gap: 8,
   },
   statusDot: {
@@ -931,36 +886,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
   },
   statusText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 13,
     fontWeight: "500",
-    letterSpacing: 0.3,
   },
   refreshButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: LIGHT_BLUE,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#d9e4ff",
   },
   refreshText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 8,
-    letterSpacing: 0.3,
   },
   quickActionsWrapper: { marginTop: 24, marginBottom: 32 },
   sectionTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 20,
-    letterSpacing: 0.3,
   },
   actionsContainer: { flexDirection: "row", justifyContent: "center", gap: 40 },
   actionItem: { alignItems: "center", width: 80 },
@@ -971,13 +922,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  actionText: { color: WHITE, fontSize: 14, fontWeight: "600" },
+  actionText: { color: DARK_TEXT, fontSize: 14, fontWeight: "600" },
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -998,7 +944,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
   },
-  modalTitle: { fontSize: 22, fontWeight: "700", color: "#0136c0" },
+  modalTitle: { fontSize: 22, fontWeight: "700", color: DARK_TEXT },
   platformItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1027,7 +973,7 @@ const styles = StyleSheet.create({
     color: DARK_TEXT,
     marginBottom: 4,
   },
-  platformDescription: { fontSize: 13, color: "#666", fontWeight: "400" },
+  platformDescription: { fontSize: 13, color: LIGHT_TEXT, fontWeight: "400" },
   modalCloseButton: {
     marginTop: 20,
     backgroundColor: "#f5f5f5",
@@ -1035,7 +981,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  modalCloseText: { color: "#666", fontSize: 16, fontWeight: "600" },
+  modalCloseText: { color: LIGHT_TEXT, fontSize: 16, fontWeight: "600" },
 });
 
 export default HomeScreen;

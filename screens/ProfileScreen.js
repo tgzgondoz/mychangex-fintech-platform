@@ -1,4 +1,3 @@
-// screens/ProfileScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
@@ -32,8 +31,11 @@ const { width, height } = Dimensions.get('window');
 
 const PRIMARY_BLUE = "#0136c0";
 const WHITE = "#ffffff";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -233,7 +235,7 @@ const ProfileScreen = () => {
     <TouchableOpacity style={styles.profileItem} onPress={onPress} disabled={!onPress}>
       <View style={styles.profileItemLeft}>
         <View style={styles.profileItemIcon}>
-          <Ionicons name={icon} size={20} color={WHITE} />
+          <Ionicons name={icon} size={20} color={PRIMARY_BLUE} />
         </View>
         <View style={styles.profileItemInfo}>
           <Text style={styles.profileItemTitle}>{title}</Text>
@@ -241,7 +243,7 @@ const ProfileScreen = () => {
         </View>
       </View>
       {showChevron && (
-        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
+        <Ionicons name="chevron-forward" size={16} color={LIGHT_TEXT} />
       )}
     </TouchableOpacity>
   );
@@ -249,15 +251,12 @@ const ProfileScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient
-          colors={['#0136c0', '#0136c0']}
-          style={styles.background}
-        >
+        <View style={styles.background}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={WHITE} />
+            <ActivityIndicator size="large" color={PRIMARY_BLUE} />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
@@ -275,11 +274,8 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={['#0136c0', '#0136c0']}
-        style={styles.background}
-      >
-        <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
+      <View style={styles.background}>
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
         
         {/* Header */}
         <View style={styles.header}>
@@ -287,7 +283,7 @@ const ProfileScreen = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color={WHITE} />
+            <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerPlaceholder} />
@@ -300,17 +296,16 @@ const ProfileScreen = () => {
         >
           {/* Profile Header Card */}
           <View style={[styles.card, styles.profileHeaderCard]}>
-            <LinearGradient
-              colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-              style={styles.profileGradient}
-            >
+            <View style={styles.profileContent}>
               <View style={styles.profileAvatarContainer}>
-                <LinearGradient
-                  colors={["#0136c0", "#0136c0"]}
-                  style={styles.profileAvatar}
-                >
-                  <Text style={styles.profileInitial}>{userInitial}</Text>
-                </LinearGradient>
+                <View style={styles.profileAvatar}>
+                  <LinearGradient
+                    colors={["#0136c0", "#0136c0"]}
+                    style={styles.profileAvatarGradient}
+                  >
+                    <Text style={styles.profileInitial}>{userInitial}</Text>
+                  </LinearGradient>
+                </View>
               </View>
               <Text style={styles.profileName}>
                 {formatDisplayName(displayData?.full_name)}
@@ -322,7 +317,7 @@ const ProfileScreen = () => {
                 <View style={styles.statusDot} />
                 <Text style={styles.statusText}>Active Account</Text>
               </View>
-            </LinearGradient>
+            </View>
           </View>
 
           {/* Personal Information Section */}
@@ -420,19 +415,16 @@ const ProfileScreen = () => {
             onPress={confirmLogout}
             disabled={loggingOut}
           >
-            <LinearGradient
-              colors={["rgba(255, 107, 107, 0.3)", "rgba(255, 82, 82, 0.2)"]}
-              style={styles.logoutGradient}
-            >
+            <View style={styles.logoutContent}>
               {loggingOut ? (
-                <ActivityIndicator color={WHITE} />
+                <ActivityIndicator color="#FF5252" />
               ) : (
                 <>
-                  <Ionicons name="log-out-outline" size={20} color={WHITE} />
+                  <Ionicons name="log-out-outline" size={20} color="#FF5252" />
                   <Text style={styles.logoutText}>Logout</Text>
                 </>
               )}
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {/* Footer Spacer */}
@@ -452,7 +444,7 @@ const ProfileScreen = () => {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Name</Text>
                 <TouchableOpacity onPress={() => setIsEditNameModalVisible(false)}>
-                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                  <Ionicons name="close" size={24} color={DARK_TEXT} />
                 </TouchableOpacity>
               </View>
               <TextInput
@@ -504,7 +496,7 @@ const ProfileScreen = () => {
                   setNewPIN('');
                   setConfirmPIN('');
                 }}>
-                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                  <Ionicons name="close" size={24} color={DARK_TEXT} />
                 </TouchableOpacity>
               </View>
               
@@ -583,7 +575,7 @@ const ProfileScreen = () => {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Security Settings</Text>
                 <TouchableOpacity onPress={() => setIsSecurityModalVisible(false)}>
-                  <Ionicons name="close" size={24} color="#1A1A1A" />
+                  <Ionicons name="close" size={24} color={DARK_TEXT} />
                 </TouchableOpacity>
               </View>
               
@@ -605,7 +597,7 @@ const ProfileScreen = () => {
             </View>
           </View>
         </Modal>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -613,10 +605,11 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: BACKGROUND_COLOR,
   },
   container: {
     flex: 1,
@@ -631,7 +624,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     marginTop: 16,
   },
@@ -641,12 +634,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
+    backgroundColor: BACKGROUND_COLOR,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: '700',
   },
@@ -655,7 +649,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
@@ -663,9 +657,9 @@ const styles = StyleSheet.create({
   profileHeaderCard: {
     overflow: 'hidden',
   },
-  profileGradient: {
+  profileContent: {
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 16,
     alignItems: 'center',
   },
   profileAvatarContainer: {
@@ -677,6 +671,13 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileAvatarGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileInitial: {
     color: WHITE,
@@ -686,13 +687,13 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: '700',
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 4,
     textAlign: 'center',
   },
   profilePhone: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -708,12 +709,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#00C853',
   },
   statusText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: '500',
   },
   sectionTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
@@ -742,12 +743,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#f0f5ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: '#d9e4ff',
   },
   profileItemInfo: {
     flex: 1,
@@ -755,25 +756,27 @@ const styles = StyleSheet.create({
   profileItemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 2,
   },
   profileItemValue: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#f0f0f0',
     marginHorizontal: 16,
   },
   logoutButton: {
     marginTop: 8,
     marginBottom: 20,
     borderRadius: 12,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ffeaea',
+    backgroundColor: '#fff5f5',
   },
-  logoutGradient: {
+  logoutContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -782,7 +785,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: {
-    color: WHITE,
+    color: '#FF5252',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -815,11 +818,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: PRIMARY_BLUE,
+    color: DARK_TEXT,
   },
   modalMessage: {
     fontSize: 16,
-    color: '#666',
+    color: LIGHT_TEXT,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -827,13 +830,13 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: DARK_TEXT,
     marginBottom: 8,
     marginTop: 12,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: CARD_BORDER,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -861,7 +864,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonTextCancel: {
-    color: '#333',
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -1,4 +1,3 @@
-// components/SpendCard.js (Updated with Small Modal)
 import React, { useState } from "react";
 import {
   View,
@@ -18,8 +17,11 @@ import { Ionicons } from "@expo/vector-icons";
 const { width, height } = Dimensions.get('window');
 const PRIMARY_BLUE = "#0136c0";
 const WHITE = "#ffffff";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const SpendCard = ({
   onServiceSelect,
@@ -64,13 +66,11 @@ const SpendCard = ({
 
     closeModal();
     
-    // Navigate to specific screens if defined
     if (service.screen && navigation) {
       navigation.navigate(service.screen);
       return;
     }
 
-    // Call the callback if provided
     if (onServiceSelect) {
       onServiceSelect(service);
     }
@@ -96,7 +96,7 @@ const SpendCard = ({
                 onPress={closeModal}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close" size={20} color="#666" />
+                <Ionicons name="close" size={20} color={LIGHT_TEXT} />
               </TouchableOpacity>
             </View>
             
@@ -146,12 +146,7 @@ const SpendCard = ({
   return (
     <>
       <View style={[styles.card, styles.spendCard]}>
-        <LinearGradient
-          colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-          style={styles.spendCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={styles.spendContent}>
           <View style={styles.spendHeader}>
             <View style={styles.spendTextContainer}>
               <Text style={styles.spendTitle}>Spend MyChangeX</Text>
@@ -178,7 +173,7 @@ const SpendCard = ({
               </LinearGradient>
             </View>
           </TouchableOpacity>
-        </LinearGradient>
+        </View>
       </View>
 
       <ServicesModal />
@@ -189,16 +184,15 @@ const SpendCard = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    overflow: 'hidden',
   },
   spendCard: {},
-  spendCardGradient: {
+  spendContent: {
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   spendHeader: {
     marginBottom: 20,
@@ -207,15 +201,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   spendTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
-    letterSpacing: 0.3,
   },
   spendSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
@@ -239,7 +232,6 @@ const styles = StyleSheet.create({
     color: WHITE,
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
   // Modal Styles
   modalOverlay: {
@@ -258,17 +250,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: width * 0.85,
     maxHeight: height * 0.5,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: WHITE,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   modalContent: {
     padding: 20,
@@ -282,14 +268,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: PRIMARY_BLUE,
+    color: DARK_TEXT,
   },
   closeButton: {
     padding: 4,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: LIGHT_TEXT,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -324,12 +310,12 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: DARK_TEXT,
     marginBottom: 4,
   },
   serviceDescription: {
     fontSize: 13,
-    color: '#666',
+    color: LIGHT_TEXT,
   },
   cancelButton: {
     marginTop: 16,
@@ -337,11 +323,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#f1f3f5',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   cancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: LIGHT_TEXT,
   },
 });
 

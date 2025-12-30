@@ -29,11 +29,13 @@ const { width, height } = Dimensions.get("window");
 
 const PRIMARY_BLUE = "#0136c0";
 const WHITE = "#ffffff";
-const LIGHT_TEXT = "#e9edf9";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
 const ERROR_RED = "#FF5252";
 const SUCCESS_GREEN = "#00C853";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const NotificationsScreen = ({
   navigation,
@@ -551,7 +553,7 @@ const NotificationsScreen = ({
         <View
           style={[
             styles.notificationIcon,
-            { backgroundColor: `${getNotificationColor(notification.type)}20` },
+            { backgroundColor: `${getNotificationColor(notification.type)}10` },
           ]}
         >
           <Ionicons
@@ -606,220 +608,181 @@ const NotificationsScreen = ({
   if (loading) {
     return (
       <View style={styles.background}>
-        <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
-        <LinearGradient
-          colors={["#0136c0", "#0136c0"]}
-          style={styles.gradientBackground}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <Ionicons name="arrow-back" size={24} color={WHITE} />
-              </TouchableOpacity>
-              <View style={styles.headerLeft}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={28}
-                  color={WHITE}
-                />
-                <Text style={styles.headerTitle}>MyChangeX Notifications</Text>
-              </View>
-              <View style={styles.headerPlaceholder} />
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+        <View style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+            </TouchableOpacity>
+            <View style={styles.headerLeft}>
+              <Ionicons name="notifications-outline" size={28} color={PRIMARY_BLUE} />
+              <Text style={styles.headerTitle}>MyChangeX Notifications</Text>
             </View>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={WHITE} />
-              <Text style={styles.loadingText}>Loading notifications...</Text>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
+            <View style={styles.headerPlaceholder} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={PRIMARY_BLUE} />
+            <Text style={styles.loadingText}>Loading notifications...</Text>
+          </View>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.background}>
-      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
-      <LinearGradient
-        colors={["#0136c0", "#0136c0"]}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          {/* Header - Matching HomeScreen style */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={WHITE} />
-            </TouchableOpacity>
-            <View style={styles.headerLeft}>
-              <Ionicons name="notifications-outline" size={28} color={WHITE} />
-              <Text style={styles.headerTitle}>MyChangeX Notifications</Text>
-            </View>
-            <View style={styles.headerActions}>
-              {displayNotifications.length > 0 && unreadCount > 0 && (
-                <>
-                  <TouchableOpacity
-                    style={styles.headerActionButton}
-                    onPress={markAllAsRead}
-                    disabled={refreshing}
-                  >
-                    <Ionicons name="checkmark-done" size={20} color={WHITE} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.headerActionButton}
-                    onPress={clearAllNotifications}
-                    disabled={refreshing}
-                  >
-                    <Ionicons name="trash" size={20} color={WHITE} />
-                  </TouchableOpacity>
-                </>
-              )}
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <Ionicons name="notifications-outline" size={28} color={PRIMARY_BLUE} />
+            <Text style={styles.headerTitle}>MyChangeX Notifications</Text>
+          </View>
+          <View style={styles.headerActions}>
+            {displayNotifications.length > 0 && unreadCount > 0 && (
+              <>
+                <TouchableOpacity
+                  style={styles.headerActionButton}
+                  onPress={markAllAsRead}
+                  disabled={refreshing}
+                >
+                  <Ionicons name="checkmark-done" size={20} color={DARK_TEXT} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.headerActionButton}
+                  onPress={clearAllNotifications}
+                  disabled={refreshing}
+                >
+                  <Ionicons name="trash" size={20} color={DARK_TEXT} />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={PRIMARY_BLUE}
+              colors={[PRIMARY_BLUE]}
+              title="Refreshing notifications..."
+              titleColor={DARK_TEXT}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Summary Card */}
+          <View style={[styles.card, styles.summaryCard]}>
+            <View style={styles.summaryContent}>
+              <View style={styles.summaryIcon}>
+                <View style={[styles.iconCircle, { backgroundColor: '#f0f5ff' }]}>
+                  <Ionicons name="notifications" size={28} color={PRIMARY_BLUE} />
+                  {unreadCount > 0 && (
+                    <View style={styles.summaryBadge}>
+                      <Text style={styles.summaryBadgeText}>
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <View style={styles.summaryText}>
+                <Text style={styles.summaryTitle}>
+                  {displayNotifications.length === 0
+                    ? "No Notifications"
+                    : "Recent Activity"}
+                </Text>
+                <Text style={styles.summarySubtitle}>
+                  {displayNotifications.length === 0
+                    ? "Your notifications will appear here"
+                    : `${unreadCount} unread of ${displayNotifications.length} total`}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={WHITE}
-                colors={[WHITE]}
-                title="Refreshing notifications..."
-                titleColor={WHITE}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Summary Card - Matching HomeScreen card style */}
-            <View style={[styles.card, styles.summaryCard]}>
-              <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.1)",
-                  "rgba(255, 255, 255, 0.05)",
-                ]}
-                style={styles.summaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.summaryIcon}>
-                  <LinearGradient
-                    colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-                    style={styles.iconCircle}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="notifications" size={28} color={WHITE} />
-                    {unreadCount > 0 && (
-                      <View style={styles.summaryBadge}>
-                        <Text style={styles.summaryBadgeText}>
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </LinearGradient>
-                </View>
-                <View style={styles.summaryText}>
-                  <Text style={styles.summaryTitle}>
-                    {displayNotifications.length === 0
-                      ? "No Notifications"
-                      : "Recent Activity"}
-                  </Text>
-                  <Text style={styles.summarySubtitle}>
-                    {displayNotifications.length === 0
-                      ? "Your notifications will appear here"
-                      : `${unreadCount} unread of ${displayNotifications.length} total`}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </View>
-
-            {/* Error Message */}
-            {error && !displayNotifications.length && (
-              <View style={styles.errorCard}>
-                <Ionicons name="warning" size={24} color={ERROR_RED} />
-                <Text style={styles.errorText}>
-                  Unable to load notifications. Pull to refresh.
-                </Text>
-              </View>
-            )}
-
-            {/* Push Notifications Status */}
-            <View style={styles.pushStatusCard}>
-              <Ionicons
-                name="wifi"
-                size={20}
-                color={Device.isDevice ? SUCCESS_GREEN : "#FFA726"}
-              />
-              <Text style={styles.pushStatusText}>
-                {Device.isDevice
-                  ? "Push notifications enabled"
-                  : "Simulator mode"}
+          {/* Error Message */}
+          {error && !displayNotifications.length && (
+            <View style={styles.errorCard}>
+              <Ionicons name="warning" size={24} color={ERROR_RED} />
+              <Text style={styles.errorText}>
+                Unable to load notifications. Pull to refresh.
               </Text>
             </View>
+          )}
 
-            {/* Section Title */}
-            <Text style={styles.sectionTitle}>Recent Notifications</Text>
+          {/* Push Notifications Status */}
+          <View style={styles.pushStatusCard}>
+            <Ionicons
+              name="wifi"
+              size={20}
+              color={Device.isDevice ? SUCCESS_GREEN : "#FFA726"}
+            />
+            <Text style={styles.pushStatusText}>
+              {Device.isDevice
+                ? "Push notifications enabled"
+                : "Simulator mode"}
+            </Text>
+          </View>
 
-            {/* Notifications List */}
-            {displayNotifications.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons
-                  name="notifications-off"
-                  size={64}
-                  color="rgba(255,255,255,0.5)"
+          {/* Section Title */}
+          <Text style={styles.sectionTitle}>Recent Notifications</Text>
+
+          {/* Notifications List */}
+          {displayNotifications.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="notifications-off"
+                size={64}
+                color={LIGHT_TEXT}
+              />
+              <Text style={styles.emptyTitle}>No Notifications Yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Your transaction notifications and alerts will appear here
+                once you start using the app.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={onRefresh}
+                disabled={refreshing}
+              >
+                <View style={styles.emptyButtonContent}>
+                  <Text style={styles.emptyButtonText}>
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.notificationsList}>
+              {displayNotifications.map((notification, index) => (
+                <NotificationItem
+                  key={`${notification.id}_${index}`}
+                  notification={notification}
+                  index={index}
+                  isLast={index === displayNotifications.length - 1}
                 />
-                <Text style={styles.emptyTitle}>No Notifications Yet</Text>
-                <Text style={styles.emptySubtitle}>
-                  Your transaction notifications and alerts will appear here
-                  once you start using the app.
-                </Text>
-                <TouchableOpacity
-                  style={styles.emptyButton}
-                  onPress={onRefresh}
-                  disabled={refreshing}
-                >
-                  <LinearGradient
-                    colors={[
-                      "rgba(255, 255, 255, 0.1)",
-                      "rgba(255, 255, 255, 0.05)",
-                    ]}
-                    style={styles.emptyButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.emptyButtonText}>
-                      {refreshing ? "Refreshing..." : "Refresh"}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.notificationsList}>
-                {displayNotifications.map((notification, index) => (
-                  <NotificationItem
-                    key={`${notification.id}_${index}`}
-                    notification={notification}
-                    index={index}
-                    isLast={index === displayNotifications.length - 1}
-                  />
-                ))}
-              </View>
-            )}
+              ))}
+            </View>
+          )}
 
-            {/* Footer Spacer */}
-            <View style={styles.footerSpacer} />
-          </ScrollView>
-        </SafeAreaView>
-      </LinearGradient>
+          {/* Footer Spacer */}
+          <View style={styles.footerSpacer} />
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };
@@ -827,14 +790,12 @@ const NotificationsScreen = ({
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: PRIMARY_BLUE,
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
   },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    backgroundColor: BACKGROUND_COLOR,
   },
   header: {
     flexDirection: "row",
@@ -843,6 +804,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 5,
+    backgroundColor: BACKGROUND_COLOR,
   },
   headerLeft: {
     flexDirection: "row",
@@ -852,11 +814,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 22,
     fontWeight: "700",
     marginLeft: 10,
-    letterSpacing: 0.5,
   },
   headerPlaceholder: {
     width: 40,
@@ -879,13 +840,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     marginTop: 16,
   },
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
@@ -894,9 +855,9 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: "hidden",
   },
-  summaryGradient: {
+  summaryContent: {
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   summaryIcon: {
     alignItems: "center",
@@ -921,7 +882,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: PRIMARY_BLUE,
+    borderColor: WHITE,
   },
   summaryBadgeText: {
     color: WHITE,
@@ -932,26 +893,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   summaryTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 4,
     textAlign: "center",
   },
   summarySubtitle: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 14,
     textAlign: "center",
   },
   errorCard: {
-    backgroundColor: "rgba(255, 107, 107, 0.2)",
+    backgroundColor: "#fff5f5",
     borderRadius: 12,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 82, 82, 0.3)",
+    borderColor: "#ffeaea",
   },
   errorText: {
     color: ERROR_RED,
@@ -971,18 +932,17 @@ const styles = StyleSheet.create({
     borderColor: CARD_BORDER,
   },
   pushStatusText: {
-    color: WHITE,
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: "500",
     marginLeft: 12,
   },
   sectionTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
     marginTop: 8,
-    letterSpacing: 0.3,
   },
   emptyState: {
     alignItems: "center",
@@ -990,7 +950,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: "600",
     marginTop: 16,
@@ -998,7 +958,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   emptySubtitle: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
@@ -1008,15 +968,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     width: "100%",
+    backgroundColor: '#f0f5ff',
+    borderWidth: 1,
+    borderColor: '#d9e4ff',
   },
-  emptyButtonGradient: {
+  emptyButtonContent: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
   },
   emptyButtonText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -1035,7 +998,7 @@ const styles = StyleSheet.create({
     borderColor: CARD_BORDER,
   },
   notificationItemUnread: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#f8f9fa",
     borderLeftWidth: 3,
     borderLeftColor: SUCCESS_GREEN,
   },
@@ -1055,7 +1018,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: '#f0f0f0',
   },
   notificationContent: {
     flex: 1,
@@ -1067,7 +1030,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notificationTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: "600",
     flex: 1,
@@ -1075,32 +1038,32 @@ const styles = StyleSheet.create({
   platformBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#f8f9fa",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     marginLeft: 8,
     maxWidth: 100,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: '#f0f0f0',
   },
   platformIcon: {
     fontSize: 12,
     marginRight: 4,
   },
   platformText: {
-    color: WHITE,
+    color: LIGHT_TEXT,
     fontSize: 10,
     fontWeight: "500",
   },
   notificationMessage: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: LIGHT_TEXT,
     fontSize: 14,
     lineHeight: 18,
     marginBottom: 4,
   },
   notificationTime: {
-    color: "rgba(255, 255, 255, 0.5)",
+    color: LIGHT_TEXT,
     fontSize: 12,
   },
   notificationRight: {
