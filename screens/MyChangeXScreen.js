@@ -701,7 +701,7 @@ const MyChangeXScreen = () => {
           .eq('id', userId);
           
         if (senderError) {
-          throw new Error(`Sender update failed: ${senderError.message}`);
+            throw new Error(`Sender update failed: ${senderError.message}`);
         }
         
         const { data: receiverProfile } = await supabase
@@ -827,7 +827,6 @@ const MyChangeXScreen = () => {
         >
           <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
         </TouchableOpacity>
-        <Ionicons name="send-outline" size={28} color={PRIMARY_BLUE} />
         <Text style={styles.headerTitle}>
           {sendBackMode ? 'Send Back Coupon' : 'MyChangeX Send'}
         </Text>
@@ -857,23 +856,6 @@ const MyChangeXScreen = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.mainContent}>
-            {/* Compact Balance Card */}
-            <View style={[styles.card, styles.balanceCard]}>
-              <View style={styles.balanceRow}>
-                <View style={styles.balanceIconContainer}>
-                  <Ionicons name="wallet-outline" size={20} color={PRIMARY_BLUE} />
-                </View>
-                <View style={styles.balanceInfo}>
-                  <Text style={styles.balanceLabel}>Available Balance</Text>
-                  <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
-                </View>
-                <View style={styles.statusIndicator}>
-                  <View style={[styles.statusDot, { backgroundColor: SUCCESS_GREEN }]} />
-                  <Text style={styles.statusText}>Active</Text>
-                </View>
-              </View>
-            </View>
-
             {/* Recipient Card */}
             <Text style={styles.sectionTitle}>Recipient</Text>
             {phoneNumber ? (
@@ -1287,60 +1269,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-  },
-  
-  // Compact Balance Card
-  balanceCard: {
-    padding: 16,
-    marginTop: 8,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  balanceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: LIGHT_BLUE,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  balanceInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  balanceLabel: {
-    color: LIGHT_TEXT,
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  balanceAmount: {
-    color: DARK_TEXT,
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: LIGHT_BLUE,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4CAF50',
-  },
-  statusText: {
-    color: PRIMARY_BLUE,
-    fontSize: 12,
-    fontWeight: '600',
   },
   
   // Section Title
