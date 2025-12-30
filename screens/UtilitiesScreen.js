@@ -17,15 +17,21 @@ import {
   Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getUserSession, getUserProfile } from './supabase';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
+// Match HomeScreen color scheme
 const PRIMARY_BLUE = "#0136c0";
-const LIGHT_TEXT = "#ffffff";
-const CARD_COLOR = "rgba(255, 255, 255, 0.15)";
+const ACCENT_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const LIGHT_TEXT = "#e9edf9";
+const CARD_BG = "rgba(255, 255, 255, 0.08)";
+const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const SUCCESS_GREEN = "#00C853";
+const ERROR_RED = "#FF5252";
 
 const UtilitiesScreen = () => {
   const navigation = useNavigation();
@@ -37,20 +43,24 @@ const UtilitiesScreen = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Utility categories with their services
   const utilityCategories = [
     {
       id: 'electricity',
       title: 'Electricity',
-      icon: '⚡',
+      icon: 'bolt',
+      iconType: 'ionicons',
       color: '#FFA726',
+      gradient: ['#FFA726', '#FFB74D'],
       services: [
         {
           id: 'zesa',
           name: 'ZESA',
           description: 'Zimbabwe Electricity Supply Authority',
-          icon: '💡',
+          icon: 'flash-outline',
+          iconType: 'ionicons',
           billerCode: 'ZESA',
           requiredFields: ['meter_number', 'amount'],
         },
@@ -58,7 +68,8 @@ const UtilitiesScreen = () => {
           id: 'zesa_prepaid',
           name: 'ZESA Prepaid',
           description: 'Buy electricity tokens',
-          icon: '🔌',
+          icon: 'battery-charging-outline',
+          iconType: 'ionicons',
           billerCode: 'ZESA_PREPAID',
           requiredFields: ['meter_number', 'amount'],
         }
@@ -67,14 +78,17 @@ const UtilitiesScreen = () => {
     {
       id: 'municipal',
       title: 'Municipal Services',
-      icon: '🏛️',
+      icon: 'city',
+      iconType: 'fontawesome5',
       color: '#4CAF50',
+      gradient: ['#4CAF50', '#66BB6A'],
       services: [
         {
           id: 'city_council',
           name: 'City Council',
           description: 'Pay rates and municipal bills',
-          icon: '🏢',
+          icon: 'building',
+          iconType: 'fontawesome5',
           billerCode: 'CITY_COUNCIL',
           requiredFields: ['account_number', 'amount'],
         },
@@ -82,7 +96,8 @@ const UtilitiesScreen = () => {
           id: 'water',
           name: 'Water Bills',
           description: 'ZINWA and local water authorities',
-          icon: '💧',
+          icon: 'water',
+          iconType: 'fontawesome5',
           billerCode: 'WATER_BILL',
           requiredFields: ['account_number', 'amount'],
         }
@@ -91,14 +106,17 @@ const UtilitiesScreen = () => {
     {
       id: 'education',
       title: 'Education',
-      icon: '🎓',
+      icon: 'graduation-cap',
+      iconType: 'fontawesome5',
       color: '#2196F3',
+      gradient: ['#2196F3', '#42A5F5'],
       services: [
         {
           id: 'school_fees',
           name: 'School Fees',
           description: 'Pay school and college fees',
-          icon: '📚',
+          icon: 'school-outline',
+          iconType: 'ionicons',
           billerCode: 'SCHOOL_FEES',
           requiredFields: ['student_id', 'amount', 'institution'],
         },
@@ -106,7 +124,8 @@ const UtilitiesScreen = () => {
           id: 'university',
           name: 'University Fees',
           description: 'University tuition and accommodation',
-          icon: '🏫',
+          icon: 'library-outline',
+          iconType: 'ionicons',
           billerCode: 'UNIVERSITY',
           requiredFields: ['student_number', 'amount', 'institution'],
         }
@@ -115,14 +134,17 @@ const UtilitiesScreen = () => {
     {
       id: 'insurance',
       title: 'Insurance',
-      icon: '🛡️',
+      icon: 'shield-checkmark-outline',
+      iconType: 'ionicons',
       color: '#9C27B0',
+      gradient: ['#9C27B0', '#BA68C8'],
       services: [
         {
           id: 'vehicle_insurance',
           name: 'Vehicle Insurance',
           description: 'Car, truck and motorcycle insurance',
-          icon: '🚗',
+          icon: 'car-outline',
+          iconType: 'ionicons',
           billerCode: 'VEHICLE_INS',
           requiredFields: ['policy_number', 'amount'],
         },
@@ -130,7 +152,8 @@ const UtilitiesScreen = () => {
           id: 'medical_insurance',
           name: 'Medical Insurance',
           description: 'Health and medical cover payments',
-          icon: '🏥',
+          icon: 'medical-bag',
+          iconType: 'materialicons',
           billerCode: 'MEDICAL_INS',
           requiredFields: ['policy_number', 'amount'],
         },
@@ -138,7 +161,8 @@ const UtilitiesScreen = () => {
           id: 'life_insurance',
           name: 'Life Insurance',
           description: 'Life insurance premium payments',
-          icon: '❤️',
+          icon: 'heart-outline',
+          iconType: 'ionicons',
           billerCode: 'LIFE_INS',
           requiredFields: ['policy_number', 'amount'],
         }
@@ -147,14 +171,17 @@ const UtilitiesScreen = () => {
     {
       id: 'telecom',
       title: 'Telecommunications',
-      icon: '📞',
+      icon: 'phone-in-talk',
+      iconType: 'materialicons',
       color: '#FF5722',
+      gradient: ['#FF5722', '#FF7043'],
       services: [
         {
           id: 'telone',
           name: 'TelOne',
           description: 'Landline and internet bills',
-          icon: '📠',
+          icon: 'phone-outline',
+          iconType: 'ionicons',
           billerCode: 'TELONE',
           requiredFields: ['account_number', 'amount'],
         },
@@ -162,7 +189,8 @@ const UtilitiesScreen = () => {
           id: 'broadband',
           name: 'Broadband',
           description: 'Internet service providers',
-          icon: '🌐',
+          icon: 'wifi-outline',
+          iconType: 'ionicons',
           billerCode: 'BROADBAND',
           requiredFields: ['account_number', 'amount'],
         }
@@ -171,14 +199,17 @@ const UtilitiesScreen = () => {
     {
       id: 'other',
       title: 'Other Bills',
-      icon: '📋',
+      icon: 'receipt-outline',
+      iconType: 'ionicons',
       color: '#607D8B',
+      gradient: ['#607D8B', '#78909C'],
       services: [
         {
           id: 'tv_license',
           name: 'TV License',
           description: 'ZBC television license',
-          icon: '📺',
+          icon: 'tv-outline',
+          iconType: 'ionicons',
           billerCode: 'TV_LICENSE',
           requiredFields: ['license_number', 'amount'],
         },
@@ -186,7 +217,8 @@ const UtilitiesScreen = () => {
           id: 'rent',
           name: 'Rent Payment',
           description: 'Monthly rental payments',
-          icon: '🏠',
+          icon: 'home-outline',
+          iconType: 'ionicons',
           billerCode: 'RENT',
           requiredFields: ['landlord_code', 'amount'],
         }
@@ -204,14 +236,16 @@ const UtilitiesScreen = () => {
       const sessionResult = await getUserSession();
       
       if (!sessionResult.success || !sessionResult.user) {
-        Alert.alert('Session Expired', 'Please login again.');
-        navigation.navigate('Login');
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
         return;
       }
 
       setUserData(sessionResult.user);
       
-      // Get user profile for balance
       const profileResult = await getUserProfile(sessionResult.user.id);
       if (profileResult.success) {
         setBalance(profileResult.data.balance || 0);
@@ -219,9 +253,17 @@ const UtilitiesScreen = () => {
       
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load user data.');
+      Alert.alert(
+        'Connection Error',
+        'Unable to load your data. Please check your internet connection and try again.',
+        [
+          { text: 'Try Again', onPress: () => loadUserData() },
+          { text: 'Go Back', onPress: () => navigation.goBack() },
+        ]
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -244,37 +286,52 @@ const UtilitiesScreen = () => {
       return;
     }
 
+    if (amount < 1) {
+      Alert.alert('Error', 'Minimum payment amount is $1.00.');
+      return;
+    }
+
     if (amount > balance) {
-      Alert.alert('Insufficient Funds', `You need $${amount.toFixed(2)} but only have $${balance.toFixed(2)} available.`);
+      Alert.alert(
+        'Insufficient Funds',
+        `You need $${amount.toFixed(2)} but only have $${balance.toFixed(2)} available.`,
+        [
+          { text: 'OK' },
+          { text: 'Add Funds', onPress: () => navigation.navigate('AddFunds') }
+        ]
+      );
       return;
     }
 
     setProcessingPayment(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // In a real app, you would integrate with payment gateway here
-      Alert.alert(
-        'Payment Successful!',
-        `Your ${selectedUtility.name} payment of $${amount.toFixed(2)} has been processed successfully.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setIsPaymentModalVisible(false);
-              setSelectedUtility(null);
-              setPaymentAmount('');
-              setAccountNumber('');
-              // Update balance (in real app, this would come from backend)
-              setBalance(prev => prev - amount);
+      const success = Math.random() > 0.1;
+      
+      if (success) {
+        Alert.alert(
+          'Payment Successful!',
+          `Your ${selectedUtility.name} payment of $${amount.toFixed(2)} has been processed successfully.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsPaymentModalVisible(false);
+                setSelectedUtility(null);
+                setPaymentAmount('');
+                setAccountNumber('');
+                setBalance(prev => prev - amount);
+              }
             }
-          }
-        ]
-      );
+          ]
+        );
+      } else {
+        throw new Error('Payment failed. Please try again.');
+      }
     } catch (error) {
-      Alert.alert('Payment Failed', 'Please try again later.');
+      Alert.alert('Payment Failed', error.message || 'Please try again later.');
     } finally {
       setProcessingPayment(false);
     }
@@ -298,168 +355,261 @@ const UtilitiesScreen = () => {
     return 'Enter account number';
   };
 
+  const renderIcon = (iconType, iconName, size = 24, color = WHITE) => {
+    switch (iconType) {
+      case 'ionicons':
+        return <Ionicons name={iconName} size={size} color={color} />;
+      case 'materialicons':
+        return <MaterialIcons name={iconName} size={size} color={color} />;
+      case 'fontawesome5':
+        return <FontAwesome5 name={iconName} size={size} color={color} />;
+      default:
+        return <Ionicons name="help-circle-outline" size={size} color={color} />;
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserData();
+  };
+
   if (loading) {
     return (
-      <LinearGradient
-        colors={['#0136c0', '#0136c0']}
-        style={styles.background}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.loadingText}>Loading utilities...</Text>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+      <View style={styles.background}>
+        <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
+        <LinearGradient
+          colors={["#0136c0", "#0136c0"]}
+          style={styles.gradientBackground}
+        >
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={WHITE} />
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#0136c0', '#0136c0']}
-      style={styles.background}
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <SafeAreaView style={styles.safeArea}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
+    <View style={styles.background}>
+      <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
+      <LinearGradient
+        colors={["#0136c0", "#0136c0"]}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          
+          {/* Header - Match HomeScreen */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={WHITE} />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Ionicons name="receipt-outline" size={22} color={WHITE} />
+              <Text style={styles.headerTitle}>Bill Payments</Text>
+            </View>
+            
+            <View style={styles.balanceContainer}>
+              <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
+            </View>
+          </View>
+
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Bill Payments</Text>
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
-          </View>
-        </View>
+            {/* Welcome Section - Match HomeScreen cards */}
+            <View style={[styles.card, styles.welcomeCard]}>
+              <LinearGradient
+                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                style={styles.welcomeGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.welcomeTitle}>Pay Your Bills</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Quick and secure bill payments for all your utilities and services
+                </Text>
+              </LinearGradient>
+            </View>
 
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Welcome Section */}
-          <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>Pay Your Bills</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Quick and secure bill payments for all your utilities and services
-            </Text>
-          </View>
-
-          {/* Utility Categories */}
-          {utilityCategories.map((category) => (
-            <View key={category.id} style={styles.categorySection}>
-              <View style={styles.categoryHeader}>
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text style={styles.categoryTitle}>{category.title}</Text>
-              </View>
-              
-              <View style={styles.servicesGrid}>
-                {category.services.map((service) => (
-                  <TouchableOpacity
-                    key={service.id}
-                    style={styles.serviceCard}
-                    onPress={() => handleUtilitySelect(service)}
+            {/* Utility Categories */}
+            {utilityCategories.map((category) => (
+              <View key={category.id} style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  <LinearGradient
+                    colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                    style={styles.categoryIconContainer}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                   >
-                    <View style={[styles.serviceIcon, { backgroundColor: `${category.color}20` }]}>
-                      <Text style={[styles.serviceIconText, { color: category.color }]}>
-                        {service.icon}
-                      </Text>
+                    {renderIcon(category.iconType, category.icon, 20, WHITE)}
+                  </LinearGradient>
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
+                </View>
+                
+                <View style={styles.servicesGrid}>
+                  {category.services.map((service) => (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={styles.serviceCard}
+                      onPress={() => handleUtilitySelect(service)}
+                    >
+                      <LinearGradient
+                        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+                        style={styles.serviceGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <View style={styles.serviceHeader}>
+                          <View style={styles.serviceIconContainer}>
+                            {renderIcon(service.iconType, service.icon, 20, WHITE)}
+                          </View>
+                          <View style={styles.serviceInfo}>
+                            <Text style={styles.serviceName}>{service.name}</Text>
+                            <Text style={styles.serviceDescription}>{service.description}</Text>
+                          </View>
+                          <Ionicons 
+                            name="chevron-forward" 
+                            size={20} 
+                            color="rgba(255, 255, 255, 0.5)" 
+                          />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Payment Modal - Match HomeScreen modal */}
+          <Modal
+            visible={isPaymentModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => !processingPayment && setIsPaymentModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <Pressable 
+                style={styles.modalBackdrop} 
+                onPress={() => !processingPayment && setIsPaymentModalVisible(false)}
+              />
+              <View style={styles.modalContent}>
+                {selectedUtility && (
+                  <>
+                    <View style={styles.modalHeader}>
+                      <View style={styles.modalTitleContainer}>
+                        {renderIcon(selectedUtility.iconType, selectedUtility.icon, 24, PRIMARY_BLUE)}
+                        <Text style={styles.modalTitle}>Pay {selectedUtility.name}</Text>
+                      </View>
+                      {!processingPayment && (
+                        <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}>
+                          <Ionicons name="close" size={24} color="#666" />
+                        </TouchableOpacity>
+                      )}
                     </View>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDescription}>{service.description}</Text>
-                  </TouchableOpacity>
-                ))}
+
+                    <View style={styles.paymentForm}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.formLabel}>
+                          {getFieldLabel(selectedUtility)}
+                        </Text>
+                        <View style={styles.textInputWrapper}>
+                          <TextInput
+                            style={styles.textInput}
+                            placeholder={getFieldPlaceholder(selectedUtility)}
+                            placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                            value={accountNumber}
+                            onChangeText={setAccountNumber}
+                            keyboardType="default"
+                            autoCapitalize="none"
+                          />
+                        </View>
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.formLabel}>Amount ($)</Text>
+                        <View style={styles.amountInputWrapper}>
+                          <Text style={styles.currencySymbol}>$</Text>
+                          <TextInput
+                            style={styles.amountInput}
+                            placeholder="Enter amount"
+                            placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                            value={paymentAmount}
+                            onChangeText={setPaymentAmount}
+                            keyboardType="decimal-pad"
+                          />
+                        </View>
+                        <Text style={styles.amountHint}>Minimum amount: $1.00</Text>
+                      </View>
+
+                      <View style={styles.balanceInfo}>
+                        <View style={styles.balanceInfoRow}>
+                          <Ionicons name="wallet-outline" size={16} color="#666" />
+                          <Text style={styles.balanceLabel}>Available Balance:</Text>
+                        </View>
+                        <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.payButton,
+                          processingPayment && styles.payButtonDisabled
+                        ]}
+                        onPress={handlePayment}
+                        disabled={processingPayment}
+                      >
+                        <LinearGradient
+                          colors={[SUCCESS_GREEN, "#00E676"]}
+                          style={styles.payButtonGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          {processingPayment ? (
+                            <ActivityIndicator color={WHITE} />
+                          ) : (
+                            <>
+                              <Ionicons name="checkmark-circle-outline" size={20} color={WHITE} />
+                              <Text style={styles.payButtonText}>
+                                Pay ${paymentAmount || '0.00'}
+                              </Text>
+                            </>
+                          )}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
-          ))}
-        </ScrollView>
-
-        {/* Payment Modal */}
-        <Modal
-          visible={isPaymentModalVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setIsPaymentModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {selectedUtility && (
-                <>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Pay {selectedUtility.name}</Text>
-                    <TouchableOpacity 
-                      onPress={() => setIsPaymentModalVisible(false)}
-                      disabled={processingPayment}
-                    >
-                      <Ionicons name="close" size={24} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.paymentForm}>
-                    <Text style={styles.formLabel}>
-                      {getFieldLabel(selectedUtility)}
-                    </Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder={getFieldPlaceholder(selectedUtility)}
-                      value={accountNumber}
-                      onChangeText={setAccountNumber}
-                      keyboardType="default"
-                      autoCapitalize="none"
-                    />
-
-                    <Text style={styles.formLabel}>Amount ($)</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Enter amount"
-                      value={paymentAmount}
-                      onChangeText={setPaymentAmount}
-                      keyboardType="decimal-pad"
-                    />
-
-                    <View style={styles.balanceInfo}>
-                      <Text style={styles.balanceLabel}>Available Balance:</Text>
-                      <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.payButton,
-                        processingPayment && styles.payButtonDisabled
-                      ]}
-                      onPress={handlePayment}
-                      disabled={processingPayment}
-                    >
-                      {processingPayment ? (
-                        <ActivityIndicator color="#ffffff" />
-                      ) : (
-                        <Text style={styles.payButtonText}>
-                          Pay ${paymentAmount || '0.00'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-            </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
-    </LinearGradient>
+          </Modal>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
+  background: { 
+    flex: 1, 
+    backgroundColor: "#0136c0" 
+  },
+  gradientBackground: { 
+    flex: 1 
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
@@ -475,7 +625,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     marginTop: 16,
   },
@@ -484,16 +634,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 16,
-    paddingBottom: 16,
+    paddingVertical: 15,
+    marginBottom: 5,
   },
   backButton: {
     padding: 8,
   },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
+    color: WHITE,
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
+    marginLeft: 10,
+    letterSpacing: 0.5,
   },
   balanceContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -502,21 +658,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   balanceText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 14,
     fontWeight: '600',
   },
-  welcomeCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 24,
-    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+  },
+  welcomeCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  welcomeGradient: {
+    padding: 24,
+    borderRadius: 20,
   },
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#ffffff',
+    color: WHITE,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -534,63 +699,78 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  categoryIcon: {
-    fontSize: 20,
+  categoryIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   categoryTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: '600',
+    color: WHITE,
+    letterSpacing: 0.3,
   },
   servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   serviceCard: {
-    width: (width - 60) / 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  serviceGradient: {
     padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+  },
+  serviceHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  serviceIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  serviceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
-  serviceIconText: {
-    fontSize: 20,
+  serviceInfo: {
+    flex: 1,
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: WHITE,
     marginBottom: 4,
-    textAlign: 'center',
   },
   serviceDescription: {
-    fontSize: 11,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 24,
-    maxHeight: '80%',
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: height * 0.8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -598,57 +778,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: PRIMARY_BLUE,
   },
   paymentForm: {
-    gap: 16,
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
   },
   formLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 4,
   },
-  textInput: {
+  textInputWrapper: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    overflow: 'hidden',
+  },
+  textInput: {
+    padding: 16,
     fontSize: 16,
+    color: '#333',
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  currencySymbol: {
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  amountInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#333',
+    borderLeftWidth: 1,
+    borderLeftColor: '#ddd',
+  },
+  amountHint: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginLeft: 4,
   },
   balanceInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
+  },
+  balanceInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   balanceLabel: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   balanceAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: PRIMARY_BLUE,
   },
   payButton: {
-    backgroundColor: PRIMARY_BLUE,
-    padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    overflow: 'hidden',
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  payButtonGradient: {
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   payButtonDisabled: {
     opacity: 0.6,
   },
   payButtonText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '700',
   },
