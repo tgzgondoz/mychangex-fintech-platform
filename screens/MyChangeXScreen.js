@@ -15,11 +15,12 @@ import {
   Dimensions,
   StatusBar,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { 
   supabase, 
   formatZimbabwePhone, 
@@ -31,25 +32,21 @@ import { NotificationService } from '../screens/services/notificationService';
 
 const { width, height } = Dimensions.get('window');
 
+// Updated to match HomeScreen colors
 const PRIMARY_BLUE = "#0136c0";
+const ACCENT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#f5f8ff";
 const WHITE = "#ffffff";
-const LIGHT_TEXT = "#e9edf9";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
 const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
+const BACKGROUND_COLOR = "#f8f9fa";
 
-// Reusable custom modal for displaying messages
+// Reusable custom modal for displaying messages - Updated to match HomeScreen
 const MessageModal = ({ visible, title, message, onClose, type = 'info' }) => {
-  const getBackgroundColor = () => {
-    switch (type) {
-      case 'error': return ERROR_RED;
-      case 'success': return SUCCESS_GREEN;
-      case 'warning': return '#FFA726';
-      default: return PRIMARY_BLUE;
-    }
-  };
-
   return (
     <Modal
       visible={visible}
@@ -59,11 +56,18 @@ const MessageModal = ({ visible, title, message, onClose, type = 'info' }) => {
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
-        <View style={[styles.messageModalContent, { backgroundColor: getBackgroundColor() }]}>
+        <View style={styles.messageModalContent}>
           <View style={styles.messageModalHeader}>
-            <Text style={styles.messageModalTitle}>{title}</Text>
+            <View style={styles.messageModalTitleContainer}>
+              <Ionicons 
+                name={type === 'success' ? "checkmark-circle" : type === 'error' ? "alert-circle" : "information-circle"} 
+                size={24} 
+                color={type === 'success' ? SUCCESS_GREEN : type === 'error' ? ERROR_RED : PRIMARY_BLUE} 
+              />
+              <Text style={styles.messageModalTitle}>{title}</Text>
+            </View>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={WHITE} />
+              <Ionicons name="close" size={24} color={LIGHT_TEXT} />
             </TouchableOpacity>
           </View>
           <Text style={styles.messageModalMessage}>{message}</Text>
@@ -302,7 +306,7 @@ const MyChangeXScreen = () => {
 
   const getSendButtonColors = () => {
     if (!isSendEnabled()) {
-      return ['#CCCCCC', '#BBBBBB'];
+      return [LIGHT_BLUE, LIGHT_BLUE];
     } else {
       return [PRIMARY_BLUE, PRIMARY_BLUE];
     }
@@ -814,225 +818,170 @@ const MyChangeXScreen = () => {
     }
   };
 
+  const HeaderBar = () => (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+        </TouchableOpacity>
+        <Ionicons name="send-outline" size={28} color={PRIMARY_BLUE} />
+        <Text style={styles.headerTitle}>
+          {sendBackMode ? 'Send Back Coupon' : 'MyChangeX Send'}
+        </Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.infoButton}
+        onPress={() => {
+          Alert.alert(
+            'Coupon Information',
+            'Send small change amounts (< $1.00) to other MyChangeX users.\n\n• First-time sends to any user allowed\n• Received coupons can be sent back\n• Auto-navigates to Home after sending',
+            [{ text: 'OK' }]
+          );
+        }}
+      >
+        <Ionicons name="information-circle-outline" size={24} color={DARK_TEXT} />
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.background}>
-      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_BLUE} />
-      <LinearGradient
-        colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={WHITE} />
-            </TouchableOpacity>
-            <View style={styles.headerLeft}>
-              <Ionicons name="send-outline" size={28} color={WHITE} />
-              <Text style={styles.headerTitle}>
-                {sendBackMode ? 'Send Back Coupon' : 'MyChangeX Send'}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.infoButton}
-              onPress={() => {
-                Alert.alert(
-                  'Coupon Information',
-                  'Send small change amounts (< $1.00) to other MyChangeX users.\n\n• First-time sends to any user allowed\n• Received coupons can be sent back\n• Auto-navigates to Home after sending',
-                  [{ text: 'OK' }]
-                );
-              }}
-            >
-              <Ionicons name="information-circle-outline" size={24} color={WHITE} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            {/* Info Card */}
-            <View style={[styles.card, styles.infoCard]}>
-              <LinearGradient
-                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                style={styles.infoCardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.infoHeader}>
-                  <Ionicons name="sparkles-outline" size={20} color={WHITE} />
-                  <Text style={styles.infoTitle}>
-                    {sendBackMode ? 'Send Back Mode' : 'Change Coupon Transfer'}
-                  </Text>
-                </View>
-                <Text style={styles.infoText}>
-                  {sendBackMode 
-                    ? 'Sending back a portion of a received coupon to the original sender'
-                    : 'Send small change amounts (less than $1.00) to other MyChangeX users'
-                  }
-                </Text>
-                {sendBackMode && originalReceivedAmount && (
-                  <View style={styles.originalAmount}>
-                    <Ionicons name="receipt-outline" size={16} color="rgba(255, 255, 255, 0.7)" />
-                    <Text style={styles.originalAmountText}>
-                      Original received amount: ${originalReceivedAmount.toFixed(2)}
-                    </Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </View>
-
-            {/* Balance Card */}
-            <Text style={styles.sectionTitle}>Your Balance</Text>
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+      <SafeAreaView style={styles.safeArea}>
+        <HeaderBar />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mainContent}>
+            {/* Compact Balance Card */}
             <View style={[styles.card, styles.balanceCard]}>
-              <LinearGradient
-                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                style={styles.balanceCardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.balanceHeader}>
-                  <Ionicons name="wallet-outline" size={20} color="rgba(255, 255, 255, 0.7)" />
+              <View style={styles.balanceRow}>
+                <View style={styles.balanceIconContainer}>
+                  <Ionicons name="wallet-outline" size={20} color={PRIMARY_BLUE} />
+                </View>
+                <View style={styles.balanceInfo}>
                   <Text style={styles.balanceLabel}>Available Balance</Text>
-                </View>
-                <View style={styles.balanceAmountContainer}>
                   <Text style={styles.balanceAmount}>${userBalance.toFixed(2)}</Text>
-                  <Text style={styles.balanceCurrency}>USD</Text>
                 </View>
-              </LinearGradient>
+                <View style={styles.statusIndicator}>
+                  <View style={[styles.statusDot, { backgroundColor: SUCCESS_GREEN }]} />
+                  <Text style={styles.statusText}>Active</Text>
+                </View>
+              </View>
             </View>
 
             {/* Recipient Card */}
             <Text style={styles.sectionTitle}>Recipient</Text>
             {phoneNumber ? (
               <View style={[styles.card, styles.recipientCard]}>
-                <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                  style={styles.recipientCardGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.recipientHeader}>
-                    <Ionicons name="person-outline" size={20} color={WHITE} />
-                    <Text style={styles.recipientLabel}>
-                      {sendBackMode ? 'Sending Back To' : 'Recipient'}
-                    </Text>
-                  </View>
-                  <Text style={styles.recipientInfo}>
-                    {recipientName || 'User'} ({phoneNumber})
+                <View style={styles.recipientHeader}>
+                  <Ionicons name="person-outline" size={20} color={PRIMARY_BLUE} />
+                  <Text style={styles.recipientLabel}>
+                    {sendBackMode ? 'Sending Back To' : 'Recipient'}
                   </Text>
-                  {sendBackMode ? (
-                    <Text style={styles.sendBackNotice}>
-                      💡 This is a "Send Back" transaction
-                    </Text>
-                  ) : (
-                    <TouchableOpacity 
-                      style={styles.changeRecipientButton}
-                      onPress={() => {
-                        setPhoneNumber('');
-                        setRecipientName('');
-                        setRecipientId(null);
-                        setShowRecipientModal(true);
-                      }}
-                    >
-                      <Text style={styles.changeRecipientText}>Change Recipient</Text>
-                    </TouchableOpacity>
-                  )}
-                </LinearGradient>
+                </View>
+                <Text style={styles.recipientInfo}>
+                  {recipientName || 'User'} ({phoneNumber})
+                </Text>
+                {sendBackMode ? (
+                  <Text style={styles.sendBackNotice}>
+                    💡 This is a "Send Back" transaction
+                  </Text>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.changeRecipientButton}
+                    onPress={() => {
+                      setPhoneNumber('');
+                      setRecipientName('');
+                      setRecipientId(null);
+                      setShowRecipientModal(true);
+                    }}
+                  >
+                    <Text style={styles.changeRecipientText}>Change Recipient</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <TouchableOpacity 
                 style={[styles.card, styles.selectRecipientCard]}
                 onPress={handleSendCoupon}
+                activeOpacity={0.9}
               >
-                <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                  style={styles.selectRecipientCardGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="person-add-outline" size={28} color={WHITE} />
+                <View style={styles.selectRecipientContent}>
+                  <View style={styles.selectRecipientIcon}>
+                    <Ionicons name="person-add-outline" size={28} color={PRIMARY_BLUE} />
+                  </View>
                   <Text style={styles.selectRecipientText}>Select Recipient</Text>
                   <Text style={styles.selectRecipientSubtext}>
                     Choose recipient via QR code or phone number
                   </Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             )}
 
             {/* Amount Card */}
             <Text style={styles.sectionTitle}>Amount</Text>
             <View style={[styles.card, styles.amountCard]}>
-              <LinearGradient
-                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                style={styles.amountCardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.amountHeader}>
-                  <Ionicons name="cash-outline" size={20} color={WHITE} />
-                  <Text style={styles.amountLabel}>
-                    {sendBackMode ? 'Amount to Send Back' : 'Enter Change Amount'}
+              <View style={styles.amountHeader}>
+                <Ionicons name="cash-outline" size={20} color={PRIMARY_BLUE} />
+                <Text style={styles.amountLabel}>
+                  {sendBackMode ? 'Amount to Send Back' : 'Enter Change Amount'}
+                </Text>
+              </View>
+              <View style={[
+                styles.amountInputContainer,
+                (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputContainerError
+              ]}>
+                <Text style={styles.dollarSign}>$</Text>
+                <TextInput
+                  style={[
+                    styles.amountInput,
+                    (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputError
+                  ]}
+                  placeholder={sendBackMode && originalReceivedAmount ? originalReceivedAmount.toFixed(2) : "0.00"}
+                  placeholderTextColor={LIGHT_TEXT}
+                  value={amount}
+                  onChangeText={handleAmountChange}
+                  keyboardType="decimal-pad"
+                  selectionColor={PRIMARY_BLUE}
+                  returnKeyType="done"
+                  maxLength={4}
+                  editable={true}
+                />
+              </View>
+              
+              {balanceStatus && (
+                <View style={[
+                  styles.balanceStatusContainer,
+                  { backgroundColor: `${balanceStatus.color}15` }
+                ]}>
+                  <Ionicons 
+                    name={balanceStatus.type === 'error' ? "warning-outline" : "checkmark-circle-outline"} 
+                    size={16} 
+                    color={balanceStatus.color} 
+                  />
+                  <Text style={[styles.balanceStatus, { color: balanceStatus.color }]}>
+                    {balanceStatus.message}
                   </Text>
                 </View>
-                <View style={[
-                  styles.amountInputContainer,
-                  (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputContainerError
-                ]}>
-                  <Text style={styles.dollarSign}>$</Text>
-                  <TextInput
-                    style={[
-                      styles.amountInput,
-                      (exceedsBalance() || !isWithinChangeLimit()) && styles.amountInputError
-                    ]}
-                    placeholder={sendBackMode && originalReceivedAmount ? originalReceivedAmount.toFixed(2) : "0.00"}
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                    value={amount}
-                    onChangeText={handleAmountChange}
-                    keyboardType="decimal-pad"
-                    selectionColor={WHITE}
-                    returnKeyType="done"
-                    maxLength={4}
-                    editable={true}
-                  />
-                </View>
-                
-                {balanceStatus && (
-                  <View style={[
-                    styles.balanceStatusContainer,
-                    { backgroundColor: `${balanceStatus.color}20` }
-                  ]}>
-                    <Ionicons 
-                      name={balanceStatus.type === 'error' ? "warning-outline" : "checkmark-circle-outline"} 
-                      size={16} 
-                      color={balanceStatus.color} 
-                    />
-                    <Text style={[styles.balanceStatus, { color: balanceStatus.color }]}>
-                      {balanceStatus.message}
+              )}
+              
+              {sendBackMode && originalReceivedAmount && !amount && (
+                <TouchableOpacity 
+                  style={styles.suggestionButton}
+                  onPress={() => setAmount(originalReceivedAmount.toFixed(2))}
+                >
+                  <View style={styles.suggestionButtonContent}>
+                    <Text style={styles.suggestionText}>
+                      Tap to use full amount: ${originalReceivedAmount.toFixed(2)}
                     </Text>
                   </View>
-                )}
-                
-                {sendBackMode && originalReceivedAmount && !amount && (
-                  <TouchableOpacity 
-                    style={styles.suggestionButton}
-                    onPress={() => setAmount(originalReceivedAmount.toFixed(2))}
-                  >
-                    <LinearGradient
-                      colors={["rgba(255, 167, 38, 0.1)", "rgba(255, 167, 38, 0.05)"]}
-                      style={styles.suggestionButtonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Text style={styles.suggestionText}>
-                        Tap to use full amount: ${originalReceivedAmount.toFixed(2)}
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-              </LinearGradient>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Send Button */}
@@ -1080,250 +1029,229 @@ const MyChangeXScreen = () => {
                   setOriginalReceivedAmount(null);
                 }}
               >
-                <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                  style={styles.switchModeButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="swap-horizontal-outline" size={20} color={WHITE} />
+                <View style={styles.switchModeButtonContent}>
+                  <Ionicons name="swap-horizontal-outline" size={20} color={PRIMARY_BLUE} />
                   <Text style={styles.switchModeButtonText}>Switch to Regular Send Mode</Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             )}
 
-            {/* Rules Info */}
-            <View style={styles.rulesContainer}>
-              <Text style={styles.rulesTitle}>Coupon Rules</Text>
-              <View style={styles.ruleItem}>
-                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
-                <Text style={styles.ruleText}>Amount must be less than $1.00</Text>
-              </View>
-              <View style={styles.ruleItem}>
-                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
-                <Text style={styles.ruleText}>First-time coupon to any user is allowed</Text>
-              </View>
-              <View style={styles.ruleItem}>
-                <Ionicons name="checkmark-circle" size={16} color={SUCCESS_GREEN} />
-                <Text style={styles.ruleText}>Received coupons can be sent back to original sender</Text>
-              </View>
-            </View>
-
             {/* Footer Spacer */}
             <View style={styles.footerSpacer} />
-          </ScrollView>
+          </View>
+        </ScrollView>
 
-          {/* Recipient Options Modal */}
-          {!sendBackMode && (
-            <Modal
-              visible={showRecipientModal}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setShowRecipientModal(false)}
-            >
-              <View style={styles.modalOverlay}>
-                <Pressable style={styles.modalBackdrop} onPress={() => setShowRecipientModal(false)} />
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Add Recipient</Text>
-                    <TouchableOpacity onPress={() => setShowRecipientModal(false)}>
-                      <Ionicons name="close" size={24} color="#1A1A1A" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <TouchableOpacity 
-                    style={styles.modalOption}
-                    onPress={handleScanQR}
-                  >
-                    <LinearGradient
-                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-                      style={styles.modalOptionIcon}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Ionicons name="qr-code-outline" size={24} color={WHITE} />
-                    </LinearGradient>
-                    <View style={styles.modalOptionInfo}>
-                      <Text style={styles.modalOptionTitle}>Scan QR Code</Text>
-                      <Text style={styles.modalOptionDescription}>Scan recipient's coupon QR code</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.modalOption}
-                    onPress={handlePhoneOption}
-                  >
-                    <LinearGradient
-                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-                      style={styles.modalOptionIcon}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Ionicons name="call-outline" size={24} color={WHITE} />
-                    </LinearGradient>
-                    <View style={styles.modalOptionInfo}>
-                      <Text style={styles.modalOptionTitle}>Enter Phone Number</Text>
-                      <Text style={styles.modalOptionDescription}>Enter recipient's phone number manually</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.modalCloseButton}
-                    onPress={() => setShowRecipientModal(false)}
-                  >
-                    <Text style={styles.modalCloseText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-          )}
-
-          {/* Phone Form Modal */}
+        {/* Recipient Options Modal - Matches HomeScreen modal style */}
+        {!sendBackMode && (
           <Modal
-            visible={showPhoneFormModal}
+            visible={showRecipientModal}
             transparent={true}
             animationType="slide"
-            onRequestClose={() => setShowPhoneFormModal(false)}
+            onRequestClose={() => setShowRecipientModal(false)}
           >
-            <KeyboardAvoidingView 
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.modalOverlay}
-            >
-              <Pressable style={styles.modalBackdrop} onPress={() => setShowPhoneFormModal(false)} />
+            <View style={styles.modalOverlay}>
+              <Pressable style={styles.modalBackdrop} onPress={() => setShowRecipientModal(false)} />
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Enter Recipient Phone</Text>
-                  <TouchableOpacity onPress={() => setShowPhoneFormModal(false)}>
-                    <Ionicons name="close" size={24} color="#1A1A1A" />
+                  <Text style={styles.modalTitle}>Add Recipient</Text>
+                  <TouchableOpacity onPress={() => setShowRecipientModal(false)}>
+                    <Ionicons name="close" size={24} color={DARK_TEXT} />
                   </TouchableOpacity>
                 </View>
                 
-                <Text style={styles.inputLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="e.g., 0771234567"
-                  placeholderTextColor="#999"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  selectionColor={PRIMARY_BLUE}
-                  autoFocus={true}
-                />
-                
-                <Text style={styles.inputHint}>
-                  Enter recipient's Zimbabwean mobile number
-                </Text>
-                
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity 
-                    style={styles.modalButtonCancel}
-                    onPress={() => setShowPhoneFormModal(false)}
-                  >
-                    <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.modalButtonConfirm, !phoneNumber && styles.disabledButton]}
-                    onPress={handlePhoneFormSubmit}
-                    disabled={!phoneNumber}
-                  >
-                    <Text style={styles.modalButtonTextConfirm}>Submit</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </KeyboardAvoidingView>
-          </Modal>
-
-          {/* Camera Modal */}
-          <Modal visible={showCamera} animationType="slide">
-            <View style={styles.cameraContainer}>
-              {permission?.granted ? (
-                <CameraView
-                  ref={cameraRef}
-                  style={styles.camera}
-                  facing="back"
-                  onBarcodeScanned={isScanning.current ? undefined : handleBarCodeScanned}
-                  barcodeScannerSettings={{
-                    barcodeTypes: ['qr'],
-                  }}
-                  onError={(error) => {
-                    setCameraError(`Camera error: ${error.message}`);
-                  }}
-                />
-              ) : (
-                <View style={styles.errorContainer}>
-                  <Ionicons name="camera-off-outline" size={64} color={WHITE} />
-                  <Text style={styles.errorText}>
-                    {cameraError || 'Camera permission required'}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.permissionButton}
-                    onPress={requestCameraAccess}
-                  >
-                    <LinearGradient
-                      colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-                      style={styles.permissionButtonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Text style={styles.permissionButtonText}>Grant Permission</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.closeCameraButton}
-                onPress={() => {
-                  setShowCamera(false);
-                  isScanning.current = false;
-                }}
-              >
-                <LinearGradient
-                  colors={[ERROR_RED, ERROR_RED]}
-                  style={styles.closeCameraButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.platformItem,
+                    { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+                  ]}
+                  onPress={handleScanQR}
                 >
-                  <Ionicons name="close" size={24} color={WHITE} />
-                  <Text style={styles.closeCameraText}>Close</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <View style={styles.platformIconContainer}>
+                    <Ionicons name="qr-code-outline" size={28} color={PRIMARY_BLUE} />
+                  </View>
+                  <View style={styles.platformInfo}>
+                    <Text style={styles.platformName}>Scan QR Code</Text>
+                    <Text style={styles.platformDescription}>
+                      Scan recipient's coupon QR code
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.platformItem,
+                    { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+                  ]}
+                  onPress={handlePhoneOption}
+                >
+                  <View style={styles.platformIconContainer}>
+                    <Ionicons name="call-outline" size={28} color={PRIMARY_BLUE} />
+                  </View>
+                  <View style={styles.platformInfo}>
+                    <Text style={styles.platformName}>Enter Phone Number</Text>
+                    <Text style={styles.platformDescription}>
+                      Enter recipient's phone number manually
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </Pressable>
+
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowRecipientModal(false)}
+                >
+                  <Text style={styles.modalCloseText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </Modal>
+        )}
 
-          {/* Message Modal */}
-          <MessageModal
-            visible={messageModal.visible}
-            title={messageModal.title}
-            message={messageModal.message}
-            type={messageModal.type}
-            onClose={handleMessageModalClose}
-          />
-        </SafeAreaView>
-      </LinearGradient>
+        {/* Phone Form Modal */}
+        <Modal
+          visible={showPhoneFormModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowPhoneFormModal(false)}
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setShowPhoneFormModal(false)} />
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Enter Recipient Phone</Text>
+                <TouchableOpacity onPress={() => setShowPhoneFormModal(false)}>
+                  <Ionicons name="close" size={24} color={DARK_TEXT} />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.inputLabel}>Phone Number</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g., 0771234567"
+                placeholderTextColor="#999"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                selectionColor={PRIMARY_BLUE}
+                autoFocus={true}
+              />
+              
+              <Text style={styles.inputHint}>
+                Enter recipient's Zimbabwean mobile number
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.modalButtonCancel}
+                  onPress={() => setShowPhoneFormModal(false)}
+                >
+                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalButtonConfirm, !phoneNumber && styles.disabledButton]}
+                  onPress={handlePhoneFormSubmit}
+                  disabled={!phoneNumber}
+                >
+                  <LinearGradient
+                    colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                    style={styles.modalButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.modalButtonTextConfirm}>Submit</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Camera Modal */}
+        <Modal visible={showCamera} animationType="slide">
+          <View style={styles.cameraContainer}>
+            {permission?.granted ? (
+              <CameraView
+                ref={cameraRef}
+                style={styles.camera}
+                facing="back"
+                onBarcodeScanned={isScanning.current ? undefined : handleBarCodeScanned}
+                barcodeScannerSettings={{
+                  barcodeTypes: ['qr'],
+                }}
+                onError={(error) => {
+                  setCameraError(`Camera error: ${error.message}`);
+                }}
+              />
+            ) : (
+              <View style={styles.errorContainer}>
+                <Ionicons name="camera-off-outline" size={64} color={PRIMARY_BLUE} />
+                <Text style={styles.errorText}>
+                  {cameraError || 'Camera permission required'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.permissionButton}
+                  onPress={requestCameraAccess}
+                >
+                  <LinearGradient
+                    colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+                    style={styles.permissionButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.closeCameraButton}
+              onPress={() => {
+                setShowCamera(false);
+                isScanning.current = false;
+              }}
+            >
+              <LinearGradient
+                colors={[ERROR_RED, ERROR_RED]}
+                style={styles.closeCameraButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name="close" size={24} color={WHITE} />
+                <Text style={styles.closeCameraText}>Close</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Message Modal */}
+        <MessageModal
+          visible={messageModal.visible}
+          title={messageModal.title}
+          message={messageModal.message}
+          type={messageModal.type}
+          onClose={handleMessageModalClose}
+        />
+      </SafeAreaView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: PRIMARY_BLUE,
-  },
-  gradientBackground: {
-    flex: 1,
-  },
+  background: { flex: 1, backgroundColor: BACKGROUND_COLOR },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: BACKGROUND_COLOR,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-  },
+  scrollContent: { flexGrow: 1, paddingBottom: 30 },
+  mainContent: { flex: 1, paddingHorizontal: 20, backgroundColor: BACKGROUND_COLOR },
+  
+  // Header - Matches HomeScreen header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1331,6 +1259,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     marginBottom: 5,
+    backgroundColor: BACKGROUND_COLOR,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -1338,105 +1267,93 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    marginRight: 8,
   },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 22,
     fontWeight: '700',
     marginLeft: 10,
-    letterSpacing: 0.5,
   },
   infoButton: {
     padding: 8,
   },
+  
+  // Card - Matches HomeScreen card
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    overflow: 'hidden',
   },
-  infoCard: {},
-  infoCardGradient: {
-    padding: 20,
-    borderRadius: 20,
+  
+  // Compact Balance Card
+  balanceCard: {
+    padding: 16,
+    marginTop: 8,
   },
-  infoHeader: {
+  balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  infoTitle: {
-    color: WHITE,
-    fontSize: 16,
+  balanceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: LIGHT_BLUE,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  balanceInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  balanceLabel: {
+    color: LIGHT_TEXT,
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  balanceAmount: {
+    color: DARK_TEXT,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: LIGHT_BLUE,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4CAF50',
+  },
+  statusText: {
+    color: PRIMARY_BLUE,
+    fontSize: 12,
     fontWeight: '600',
   },
-  infoText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  originalAmount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  originalAmountText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-  },
+  
+  // Section Title
   sectionTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
     marginTop: 8,
-    letterSpacing: 0.3,
   },
-  balanceCard: {},
-  balanceCardGradient: {
-    padding: 20,
-    borderRadius: 20,
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  balanceLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-    fontWeight: '500',
-    letterSpacing: 0.5,
-  },
-  balanceAmountContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  balanceAmount: {
-    color: WHITE,
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    marginRight: 8,
-  },
-  balanceCurrency: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 16,
-    fontWeight: '500',
-  },
+  
+  // Recipient Card
   recipientCard: {},
-  recipientCardGradient: {
-    padding: 20,
-    borderRadius: 20,
-  },
   recipientHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1444,12 +1361,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   recipientLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: '500',
   },
   recipientInfo: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
@@ -1461,40 +1378,49 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   changeRecipientButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: LIGHT_BLUE,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#d9e4ff',
   },
   changeRecipientText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: '600',
   },
+  
+  // Select Recipient Card
   selectRecipientCard: {},
-  selectRecipientCardGradient: {
-    padding: 24,
-    borderRadius: 20,
+  selectRecipientContent: {
     alignItems: 'center',
+    padding: 16,
+  },
+  selectRecipientIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: LIGHT_BLUE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   selectRecipientText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     fontWeight: '600',
-    marginTop: 12,
     marginBottom: 4,
   },
   selectRecipientSubtext: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     textAlign: 'center',
   },
+  
+  // Amount Card
   amountCard: {},
-  amountCardGradient: {
-    padding: 20,
-    borderRadius: 20,
-  },
   amountHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1502,17 +1428,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   amountLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: '500',
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: LIGHT_BLUE,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: CARD_BORDER,
     marginBottom: 16,
   },
   amountInputContainerError: {
@@ -1522,14 +1448,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     paddingLeft: 16,
     paddingRight: 8,
-    color: WHITE,
+    color: DARK_TEXT,
     fontWeight: '600',
   },
   amountInput: {
     flex: 1,
     padding: 16,
     fontSize: 24,
-    color: WHITE,
+    color: DARK_TEXT,
     fontWeight: '600',
   },
   amountInputError: {
@@ -1542,7 +1468,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: CARD_BORDER,
   },
   balanceStatus: {
     fontSize: 14,
@@ -1553,16 +1479,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  suggestionButtonGradient: {
+  suggestionButtonContent: {
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 167, 38, 0.2)',
   },
   suggestionText: {
     color: '#FFA726',
     fontSize: 14,
     fontWeight: '600',
   },
+  
+  // Send Button
   sendButton: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -1586,59 +1517,38 @@ const styles = StyleSheet.create({
     color: WHITE,
     fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
+  
+  // Switch Mode Button
   switchModeButton: {
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
   },
-  switchModeButtonGradient: {
+  switchModeButtonContent: {
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-  },
-  switchModeButtonText: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rulesContainer: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 8,
+    backgroundColor: LIGHT_BLUE,
     borderWidth: 1,
     borderColor: CARD_BORDER,
   },
-  rulesTitle: {
-    color: WHITE,
+  switchModeButtonText: {
+    color: PRIMARY_BLUE,
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
   },
-  ruleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 12,
-  },
-  ruleText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 14,
-    flex: 1,
-  },
+  
+  // Footer Spacer
   footerSpacer: {
     height: 20,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
+  
+  // Modals - Matches HomeScreen modal styles
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -1658,12 +1568,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: PRIMARY_BLUE,
-  },
-  modalOption: {
+  modalTitle: { fontSize: 22, fontWeight: '700', color: DARK_TEXT },
+  
+  // Platform/Recipient Item - Matches HomeScreen platform item
+  platformItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
@@ -1673,27 +1581,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
-  modalOptionIcon: {
-    width: 48,
-    height: 48,
+  platformIconContainer: {
+    width: 52,
+    height: 52,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    backgroundColor: LIGHT_BLUE,
   },
-  modalOptionInfo: {
-    flex: 1,
-  },
-  modalOptionTitle: {
+  platformInfo: { flex: 1 },
+  platformName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: DARK_TEXT,
     marginBottom: 4,
   },
-  modalOptionDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
+  platformDescription: { fontSize: 13, color: LIGHT_TEXT, fontWeight: '400' },
   modalCloseButton: {
     marginTop: 20,
     backgroundColor: '#f5f5f5',
@@ -1701,29 +1605,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  modalCloseText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  modalCloseText: { color: LIGHT_TEXT, fontSize: 16, fontWeight: '600' },
+  
+  // Phone Form Modal
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: DARK_TEXT,
     marginBottom: 8,
     marginTop: 12,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: CARD_BORDER,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: LIGHT_BLUE,
   },
   inputHint: {
     fontSize: 12,
-    color: '#666',
+    color: LIGHT_TEXT,
     marginTop: -8,
     marginBottom: 16,
   },
@@ -1739,17 +1641,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: CARD_BORDER,
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: PRIMARY_BLUE,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalButtonGradient: {
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   modalButtonTextCancel: {
-    color: '#333',
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1761,6 +1666,8 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
+  
+  // Camera Modal
   cameraContainer: {
     flex: 1,
     backgroundColor: '#000000',
@@ -1772,11 +1679,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: WHITE,
     padding: 20,
   },
   errorText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 18,
     textAlign: 'center',
     marginTop: 16,
@@ -1817,13 +1724,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  
+  // Message Modal - Matches HomeScreen style
   messageModalContent: {
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: WHITE,
     borderRadius: 20,
     padding: 24,
     margin: 20,
     maxWidth: 400,
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   messageModalHeader: {
     flexDirection: 'row',
@@ -1831,23 +1742,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  messageModalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
   messageModalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: WHITE,
+    color: DARK_TEXT,
+    flex: 1,
   },
   messageModalMessage: {
     fontSize: 16,
-    color: WHITE,
+    color: LIGHT_TEXT,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 22,
   },
   messageModalButton: {
-    backgroundColor: WHITE,
+    backgroundColor: LIGHT_BLUE,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   messageModalButtonText: {
     color: PRIMARY_BLUE,
