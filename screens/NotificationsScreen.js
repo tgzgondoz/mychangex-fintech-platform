@@ -13,7 +13,6 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import * as Device from "expo-device";
@@ -27,18 +26,15 @@ import { NotificationService } from "./services/notificationService";
 const { width, height } = Dimensions.get("window");
 
 const PRIMARY_BLUE = "#0136c0";
-const PRIMARY_BLUE_LIGHT = "#f0f5ff";
 const WHITE = "#ffffff";
 const LIGHT_TEXT = "#666666";
 const DARK_TEXT = "#1A1A1A";
-const CARD_BG = "#ffffff";
+const CARD_BG = "#ffffff"; 
 const CARD_BORDER = "#eaeaea";
 const ERROR_RED = "#FF5252";
 const SUCCESS_GREEN = "#00C853";
 const WARNING_ORANGE = "#FFA726";
 const BACKGROUND_COLOR = "#f8f9fa";
-const TABLE_HEADER_BG = "#f9fafb";
-const TABLE_ROW_ALT = "#fafbfc";
 
 const NotificationsScreen = ({
   navigation,
@@ -628,7 +624,7 @@ const NotificationsScreen = ({
 
   const filteredNotifications = getFilteredNotifications();
 
-  const NotificationItem = React.memo(({ notification, index, isLast }) => {
+  const NotificationItem = React.memo(({ notification, index }) => {
     const typeBadge = getTypeBadge(notification.type);
     const formattedDate = formatDate(notification.timestamp);
     const showDateHeader = index === 0 || 
@@ -644,25 +640,19 @@ const NotificationsScreen = ({
         <TouchableOpacity
           style={[
             styles.tableRow,
-            index % 2 === 0 && styles.tableRowAlt,
             !notification.read && styles.tableRowUnread,
-            isLast && styles.lastTableRow,
           ]}
           onPress={() => handleNotificationPress(notification)}
           activeOpacity={0.7}
         >
-          {/* Icon Column */}
           <View style={styles.iconColumn}>
-            <View style={[styles.iconContainer, { backgroundColor: `${getNotificationColor(notification.type)}15` }]}>
-              <Ionicons
-                name={getNotificationIcon(notification.type)}
-                size={16}
-                color={getNotificationColor(notification.type)}
-              />
-            </View>
+            <Ionicons
+              name={getNotificationIcon(notification.type)}
+              size={18}
+              color={getNotificationColor(notification.type)}
+            />
           </View>
 
-          {/* Details Column */}
           <View style={styles.detailsColumn}>
             <View style={styles.detailsHeader}>
               <Text style={styles.notificationTitle} numberOfLines={1}>
@@ -680,11 +670,9 @@ const NotificationsScreen = ({
             </Text>
             
             <View style={styles.detailsFooter}>
-              <View style={[styles.typeBadge, { backgroundColor: typeBadge.bg }]}>
-                <Text style={[styles.typeBadgeText, { color: typeBadge.color }]}>
-                  {typeBadge.text}
-                </Text>
-              </View>
+              <Text style={[styles.typeBadgeText, { color: typeBadge.color }]}>
+                {typeBadge.text}
+              </Text>
               
               {notification.platform && (
                 <View style={styles.platformContainer}>
@@ -703,54 +691,32 @@ const NotificationsScreen = ({
             </View>
           </View>
 
-          {/* Status Column */}
           <View style={styles.statusColumn}>
             {!notification.read && <View style={styles.unreadDot} />}
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color="#C7C7CC"
-              style={styles.chevronIcon}
-            />
           </View>
         </TouchableOpacity>
       </>
     );
   });
 
-  const TableHeader = () => (
-    <View style={styles.tableHeader}>
-      <View style={styles.tableHeaderRow}>
-        <Text style={styles.tableHeaderCell}>NOTIFICATION</Text>
-        <Text style={styles.tableHeaderCell}>AMOUNT</Text>
-        <Text style={styles.tableHeaderCell}>STATUS</Text>
-      </View>
-      <View style={styles.tableHeaderDivider} />
-    </View>
-  );
-
   const ViewModeTabs = () => (
     <View style={styles.viewModeContainer}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.viewModeScrollContent}
-      >
+      <View style={styles.viewModeButtons}>
         <TouchableOpacity
-          style={[styles.viewModeTab, viewMode === "all" && styles.viewModeTabActive]}
+          style={[styles.viewModeButton, viewMode === "all" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("all")}
         >
-          <Text style={[styles.viewModeTabText, viewMode === "all" && styles.viewModeTabTextActive]}>
+          <Text style={[styles.viewModeButtonText, viewMode === "all" && styles.viewModeButtonTextActive]}>
             All ({displayNotifications.length})
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.viewModeTab, viewMode === "unread" && styles.viewModeTabActive]}
+          style={[styles.viewModeButton, viewMode === "unread" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("unread")}
         >
-          <View style={styles.unreadTabContent}>
-            <Text style={[styles.viewModeTabText, viewMode === "unread" && styles.viewModeTabTextActive]}>
+          <View style={styles.unreadButtonContent}>
+            <Text style={[styles.viewModeButtonText, viewMode === "unread" && styles.viewModeButtonTextActive]}>
               Unread
             </Text>
             {unreadCount > 0 && (
@@ -762,14 +728,14 @@ const NotificationsScreen = ({
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.viewModeTab, viewMode === "transactions" && styles.viewModeTabActive]}
+          style={[styles.viewModeButton, viewMode === "transactions" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("transactions")}
         >
-          <Text style={[styles.viewModeTabText, viewMode === "transactions" && styles.viewModeTabTextActive]}>
+          <Text style={[styles.viewModeButtonText, viewMode === "transactions" && styles.viewModeButtonTextActive]}>
             Transactions
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </View>
   );
 
@@ -802,56 +768,47 @@ const NotificationsScreen = ({
       <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
-        <LinearGradient
-          colors={[PRIMARY_BLUE_LIGHT, WHITE]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
-            </TouchableOpacity>
-            
-            <View style={styles.headerCenter}>
-              <View style={styles.headerIconContainer}>
-                <Ionicons name="notifications" size={24} color={PRIMARY_BLUE} />
-                {unreadCount > 0 && (
-                  <View style={styles.headerUnreadBadge}>
-                    <Text style={styles.headerUnreadText}>{unreadCount}</Text>
-                  </View>
-                )}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Ionicons name="notifications" size={22} color={PRIMARY_BLUE} style={styles.headerIcon} />
+            <Text style={styles.headerTitle}>Notifications</Text>
+            {unreadCount > 0 && (
+              <View style={styles.headerUnreadBadge}>
+                <Text style={styles.headerUnreadText}>{unreadCount}</Text>
               </View>
-              <Text style={styles.headerTitle}>Notifications</Text>
-            </View>
-            
-            <View style={styles.headerActions}>
-              {displayNotifications.length > 0 && (
-                <>
-                  {unreadCount > 0 && (
-                    <TouchableOpacity
-                      style={styles.headerActionButton}
-                      onPress={markAllAsRead}
-                      disabled={refreshing}
-                    >
-                      <Ionicons name="checkmark-done" size={20} color={DARK_TEXT} />
-                    </TouchableOpacity>
-                  )}
+            )}
+          </View>
+          
+          <View style={styles.headerActions}>
+            {displayNotifications.length > 0 && (
+              <>
+                {unreadCount > 0 && (
                   <TouchableOpacity
                     style={styles.headerActionButton}
-                    onPress={clearAllNotifications}
+                    onPress={markAllAsRead}
                     disabled={refreshing}
                   >
-                    <Ionicons name="trash-outline" size={20} color={DARK_TEXT} />
+                    <Ionicons name="checkmark-done" size={20} color={DARK_TEXT} />
                   </TouchableOpacity>
-                </>
-              )}
-            </View>
+                )}
+                <TouchableOpacity
+                  style={styles.headerActionButton}
+                  onPress={clearAllNotifications}
+                  disabled={refreshing}
+                >
+                  <Ionicons name="trash-outline" size={20} color={DARK_TEXT} />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-        </LinearGradient>
+        </View>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -870,17 +827,17 @@ const NotificationsScreen = ({
           {/* View Mode Tabs */}
           <ViewModeTabs />
 
-          {/* Stats Cards */}
+          {/* Stats */}
           <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
+            <View style={styles.statItem}>
               <Text style={styles.statNumber}>{displayNotifications.length}</Text>
               <Text style={styles.statLabel}>Total</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={styles.statItem}>
               <Text style={styles.statNumber}>{unreadCount}</Text>
               <Text style={styles.statLabel}>Unread</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={styles.statItem}>
               <Text style={styles.statNumber}>
                 {displayNotifications.filter(n => n.type === "received" || n.type === "sent").length}
               </Text>
@@ -888,15 +845,19 @@ const NotificationsScreen = ({
             </View>
           </View>
 
-          {/* Table Header */}
-          {filteredNotifications.length > 0 && <TableHeader />}
+          {/* Notifications Header */}
+          {filteredNotifications.length > 0 && (
+            <View style={styles.notificationsHeader}>
+              <Text style={styles.notificationsHeaderText}>Recent Activity</Text>
+            </View>
+          )}
 
           {/* Notifications Table */}
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons
                 name={viewMode === "unread" ? "checkmark-circle" : "notifications-off"}
-                size={64}
+                size={48}
                 color={LIGHT_TEXT}
               />
               <Text style={styles.emptyTitle}>
@@ -914,7 +875,7 @@ const NotificationsScreen = ({
               >
                 <Ionicons 
                   name="refresh" 
-                  size={20} 
+                  size={18} 
                   color={PRIMARY_BLUE} 
                   style={{ marginRight: 8 }}
                 />
@@ -930,7 +891,6 @@ const NotificationsScreen = ({
                   key={`${notification.id}_${index}`}
                   notification={notification}
                   index={index}
-                  isLast={index === filteredNotifications.length - 1}
                 />
               ))}
             </View>
@@ -966,68 +926,53 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  headerGradient: {
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 16,
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: WHITE,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: WHITE,
+    padding: 4,
   },
   headerCenter: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  headerIconContainer: {
     position: "relative",
-    marginRight: 12,
   },
-  headerUnreadBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: ERROR_RED,
-    borderRadius: 8,
-    width: 16,
-    height: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: WHITE,
-  },
-  headerUnreadText: {
-    color: WHITE,
-    fontSize: 9,
-    fontWeight: "bold",
+  headerIcon: {
+    marginRight: 8,
   },
   headerTitle: {
     color: DARK_TEXT,
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  headerUnreadBadge: {
+    backgroundColor: ERROR_RED,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  headerUnreadText: {
+    color: WHITE,
+    fontSize: 11,
+    fontWeight: "bold",
   },
   headerActions: {
     flexDirection: "row",
   },
   headerActionButton: {
-    padding: 8,
-    marginLeft: 8,
-    borderRadius: 10,
-    backgroundColor: WHITE,
+    padding: 4,
+    marginLeft: 12,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -1040,66 +985,65 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   viewModeContainer: {
-    marginBottom: 20,
+    marginVertical: 16,
   },
-  viewModeScrollContent: {
-    paddingHorizontal: 4,
-  },
-  viewModeTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 12,
+  viewModeButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
     backgroundColor: WHITE,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderRadius: 20,
+    padding: 4,
   },
-  viewModeTabActive: {
+  viewModeButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+    marginHorizontal: 2,
+    borderRadius: 16,
+  },
+  viewModeButtonActive: {
     backgroundColor: PRIMARY_BLUE,
-    borderColor: PRIMARY_BLUE,
   },
-  viewModeTabText: {
+  viewModeButtonText: {
     color: LIGHT_TEXT,
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
   },
-  viewModeTabTextActive: {
+  viewModeButtonTextActive: {
     color: WHITE,
   },
-  unreadTabContent: {
+  unreadButtonContent: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
   },
   unreadCountBadge: {
     backgroundColor: ERROR_RED,
-    borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginLeft: 6,
+    borderRadius: 8,
   },
   unreadCountText: {
     color: WHITE,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "bold",
   },
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: CARD_BORDER,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 4,
+  statItem: {
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    flex: 1,
   },
   statNumber: {
     color: DARK_TEXT,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     marginBottom: 4,
   },
@@ -1107,134 +1051,86 @@ const styles = StyleSheet.create({
     color: LIGHT_TEXT,
     fontSize: 12,
     fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
-  tableHeader: {
+  notificationsHeader: {
     marginBottom: 12,
   },
-  tableHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  tableHeaderCell: {
-    color: LIGHT_TEXT,
-    fontSize: 12,
+  notificationsHeaderText: {
+    color: DARK_TEXT,
+    fontSize: 16,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  tableHeaderDivider: {
-    height: 1,
-    backgroundColor: CARD_BORDER,
-    marginHorizontal: 16,
   },
   tableContainer: {
     backgroundColor: WHITE,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    overflow: "hidden",
-    marginBottom: 20,
   },
   dateHeader: {
-    backgroundColor: TABLE_HEADER_BG,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: CARD_BORDER,
+    backgroundColor: "#f9fafb",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   dateHeaderText: {
-    color: DARK_TEXT,
-    fontSize: 13,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    color: LIGHT_TEXT,
+    fontSize: 12,
+    fontWeight: "500",
   },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: CARD_BORDER,
   },
-  tableRowAlt: {
-    backgroundColor: TABLE_ROW_ALT,
-  },
   tableRowUnread: {
-    borderLeftWidth: 3,
-    borderLeftColor: PRIMARY_BLUE,
-  },
-  lastTableRow: {
-    borderBottomWidth: 0,
+    backgroundColor: "#fafbfc",
   },
   iconColumn: {
-    width: 40,
-    marginRight: 12,
-  },
-  iconContainer: {
     width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    marginRight: 12,
   },
   detailsColumn: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
   },
   detailsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   notificationTitle: {
     color: DARK_TEXT,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
   },
   amountText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
   },
   notificationMessage: {
     color: LIGHT_TEXT,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 10,
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 8,
   },
   detailsFooter: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
   },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 4,
-  },
   typeBadgeText: {
     fontSize: 10,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
+    marginRight: 8,
+    marginBottom: 4,
   },
   platformContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
     marginRight: 8,
     marginBottom: 4,
   },
@@ -1249,86 +1145,77 @@ const styles = StyleSheet.create({
   },
   timeText: {
     color: LIGHT_TEXT,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "500",
     marginBottom: 4,
   },
   statusColumn: {
+    width: 24,
     alignItems: "center",
   },
   unreadDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
     backgroundColor: PRIMARY_BLUE,
-    marginBottom: 8,
-  },
-  chevronIcon: {
-    opacity: 0.7,
   },
   emptyState: {
     alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
     backgroundColor: WHITE,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   emptyTitle: {
     color: DARK_TEXT,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "600",
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
     color: LIGHT_TEXT,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   emptyButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: PRIMARY_BLUE_LIGHT,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#f0f5ff",
   },
   emptyButtonText: {
     color: PRIMARY_BLUE,
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
   },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     backgroundColor: WHITE,
-    borderRadius: 12,
     borderWidth: 1,
     borderColor: CARD_BORDER,
   },
   footerText: {
     color: LIGHT_TEXT,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
   },
   footerButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   footerButtonText: {
     color: PRIMARY_BLUE,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
   },
   footerButtonTextDisabled: {
