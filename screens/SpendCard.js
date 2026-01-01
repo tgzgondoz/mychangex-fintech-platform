@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  Platform,
   Alert,
   Dimensions,
   ScrollView,
@@ -19,12 +18,8 @@ const PRIMARY_BLUE = "#0136c0";
 const WHITE = "#ffffff";
 const LIGHT_TEXT = "#666666";
 const DARK_TEXT = "#1A1A1A";
-const CARD_BG = "#ffffff";
-const CARD_BORDER = "#eaeaea";
-const BACKGROUND_COLOR = "#f8f9fa";
 
 const SpendCard = ({
-  onServiceSelect,
   navigation,
   services = [
     { 
@@ -49,7 +44,6 @@ const SpendCard = ({
     },
   ],
   userBalance = 0,
-  buttonText = " To pay for bills, airtime, event tickets using MyChangeX"
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -68,11 +62,6 @@ const SpendCard = ({
     
     if (service.screen && navigation) {
       navigation.navigate(service.screen);
-      return;
-    }
-
-    if (onServiceSelect) {
-      onServiceSelect(service);
     }
   };
 
@@ -87,57 +76,49 @@ const SpendCard = ({
     >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={closeModal} />
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Available Services</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={closeModal}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close" size={20} color={LIGHT_TEXT} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.modalSubtitle}>
-              Choose a service to use your balance
-            </Text>
-
-            <ScrollView 
-              style={styles.servicesScroll}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.servicesContainer}
-            >
-              {availableServices.map((service, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.serviceItem}
-                  onPress={() => handleServiceSelect(service)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.serviceIconContainer}>
-                    <Ionicons name={service.icon} size={22} color={PRIMARY_BLUE} />
-                  </View>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDescription} numberOfLines={1}>
-                      {service.description}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color="#999" />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={closeModal}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Available Services</Text>
+            <TouchableOpacity onPress={closeModal}>
+              <Ionicons name="close" size={22} color={LIGHT_TEXT} />
             </TouchableOpacity>
           </View>
+          
+          <Text style={styles.modalSubtitle}>
+            Choose a service to use your balance
+          </Text>
+
+          <ScrollView 
+            style={styles.servicesScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            {availableServices.map((service, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.serviceItem}
+                onPress={() => handleServiceSelect(service)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.serviceIcon}>
+                  <Ionicons name={service.icon} size={20} color={PRIMARY_BLUE} />
+                </View>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <Text style={styles.serviceDescription}>
+                    {service.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#ccc" />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={closeModal}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -145,33 +126,27 @@ const SpendCard = ({
 
   return (
     <>
-      <View style={[styles.card, styles.spendCard]}>
-        <View style={styles.spendContent}>
-          <View style={styles.spendHeader}>
-            <View style={styles.spendTextContainer}>
-              <Text style={styles.spendTitle}>Spend Your Change </Text>
-              <Text style={styles.spendSubtitle}>
-                {buttonText}
-              </Text>
-            </View>
-          </View>
+      <View style={styles.card}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Spend Your Change</Text>
+          <Text style={styles.subtitle}>
+            To pay for bills, airtime, and event tickets
+          </Text>
           <TouchableOpacity
             onPress={openModal}
-            activeOpacity={0.9}
-            style={styles.buttonContainer}
+            activeOpacity={0.8}
+            style={styles.button}
           >
-            <View style={styles.getStartedButton}>
-              <LinearGradient
-                colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
-                style={styles.getStartedButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.getStartedText}>
-                  {userBalance > 0 ? "Spend Now" : "Get Started"}
-                </Text>
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={[PRIMARY_BLUE, PRIMARY_BLUE]}
+              style={styles.buttonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.buttonText}>
+                {userBalance > 0 ? "Spend Now" : "Get Started"}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -183,95 +158,70 @@ const SpendCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: CARD_BG,
     borderRadius: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    padding: 20,
   },
-  spendCard: {},
-  spendContent: {
-    padding: 24,
-    borderRadius: 16,
-  },
-  spendHeader: {
-    marginBottom: 20,
-  },
-  spendTextContainer: {
+  content: {
     alignItems: 'center',
   },
-  spendTitle: {
-    color: DARK_TEXT,
-    fontSize: 20,
+  title: {
+    fontSize: 18,
     fontWeight: '700',
+    color: DARK_TEXT,
     marginBottom: 8,
     textAlign: 'center',
   },
-  spendSubtitle: {
-    color: LIGHT_TEXT,
+  subtitle: {
     fontSize: 14,
-    lineHeight: 20,
+    color: LIGHT_TEXT,
     textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
   },
-  buttonContainer: {
-    alignSelf: 'center',
+  button: {
     width: '100%',
-  },
-  getStartedButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    width: '100%',
   },
-  getStartedButtonGradient: {
+  buttonGradient: {
     paddingVertical: 16,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  getStartedText: {
+  buttonText: {
     color: WHITE,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
+  
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  modalContainer: {
-    width: width * 0.85,
-    maxHeight: height * 0.5,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: WHITE,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
+    width: width * 0.85,
+    maxHeight: height * 0.6,
+    backgroundColor: WHITE,
+    borderRadius: 16,
     padding: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: DARK_TEXT,
-  },
-  closeButton: {
-    padding: 4,
   },
   modalSubtitle: {
     fontSize: 14,
@@ -282,23 +232,19 @@ const styles = StyleSheet.create({
   servicesScroll: {
     maxHeight: height * 0.3,
   },
-  servicesContainer: {
-    paddingBottom: 10,
-  },
   serviceItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    marginBottom: 10,
   },
-  serviceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  serviceIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(1, 54, 192, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -311,7 +257,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: DARK_TEXT,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   serviceDescription: {
     fontSize: 13,
@@ -321,10 +267,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#f1f3f5',
+    backgroundColor: '#f5f5f5',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   cancelText: {
     fontSize: 16,
