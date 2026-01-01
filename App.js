@@ -45,7 +45,7 @@ export default function App() {
       const { title, body, data } = notification.request.content;
       
       // Create new notification object using helper method
-      const newNotification = NotificationService.createNotificationObject(notification);
+      let newNotification = NotificationService.createNotificationObject(notification);
       
       if (!newNotification) {
         // Fallback if helper method doesn't exist
@@ -223,7 +223,6 @@ export default function App() {
                 <HomeScreen 
                   {...props} 
                   unreadCount={unreadCount}
-                  // NEW: Pass refresh trigger to HomeScreen
                   homeRefreshTrigger={homeRefreshTrigger}
                   lastTransaction={lastTransaction}
                   setHomeRefreshTrigger={setHomeRefreshTrigger}
@@ -251,6 +250,8 @@ export default function App() {
             <Stack.Screen name="Econet" component={EconetScreen} />
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
+            {/* ADDED: CouponTransaction for authenticated users */}
+            <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
 
             {/* Keep auth screens available for logout/login flow */}
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -305,6 +306,7 @@ export default function App() {
             <Stack.Screen name="Econet" component={EconetScreen} />
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
+            <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
           </>
         )}
       </Stack.Navigator>
@@ -334,3 +336,4 @@ import EconetScreen from './screens/EconetScreen';
 import MyChangeXScreen from './screens/MyChangeXScreen';
 import OmariScreen from './screens/OmariScreen';
 import OTPVerificationScreen from './screens/OTPVerificationScreen';
+import CouponTransactionsScreen from './screens/CouponTransactionsScreen';

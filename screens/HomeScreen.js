@@ -36,6 +36,8 @@ import { NotificationService } from "./services/notificationService";
 import { useIsFocused } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
+import { useNavigation } from '@react-navigation/native';
+
 
 const { width, height } = Dimensions.get("window");
 const PRIMARY_BLUE = "#0136c0";
@@ -83,11 +85,13 @@ const HomeScreen = ({
   useEffect(() => {
     setUnreadNotificationsCount(unreadCount);
   }, [unreadCount]);
+  
   useEffect(() => {
     if (homeRefreshTrigger > 0) {
       handleAutoRefresh();
     }
   }, [homeRefreshTrigger, lastTransaction, isFocused]);
+  
   useEffect(() => {
     if (isFocused) {
       setTimeout(() => {
@@ -98,6 +102,7 @@ const HomeScreen = ({
       }, 300);
     }
   }, [isFocused, userData?.id]);
+  
   useLayoutEffect(() => {
     loadUserData();
   }, []);
@@ -221,12 +226,14 @@ const HomeScreen = ({
     setRefreshing(true);
     loadUserData();
   }, []);
+  
   const handlePressIn = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 0.96,
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
+  
   const handlePressOut = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 1,
@@ -235,6 +242,7 @@ const HomeScreen = ({
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
+  
   const openSendModal = () => setIsSendModalVisible(true);
   const closeSendModal = () => setIsSendModalVisible(false);
 
@@ -260,6 +268,7 @@ const HomeScreen = ({
   const handleReceive = () => {
     navigation.navigate("Recieve");
   };
+  
   const handlePlatformSelect = (platform) => {
     closeSendModal();
     setTimeout(() => {
@@ -453,37 +462,46 @@ const HomeScreen = ({
       </TouchableOpacity>
     );
   };
+const BalanceCard = () => {
+  // Use the navigation prop from HomeScreen, not create a new hook
+  // Remove: const navigation = useNavigation();
+  
+  const displayData = profileData || userData;
+  const balance = displayData?.balance || 0;
+  const balanceChange = previousBalance ? balance - previousBalance : 0;
+  const showIncrease = balanceChange > 0.01;
+  const showDecrease = balanceChange < -0.01;
 
-  const BalanceCard = () => {
-    const displayData = profileData || userData;
-    const balance = displayData?.balance || 0;
-    const balanceChange = previousBalance ? balance - previousBalance : 0;
-    const showIncrease = balanceChange > 0.01;
-    const showDecrease = balanceChange < -0.01;
-    return (
-      <View style={[styles.card, styles.balanceCard]}>
-        <View style={styles.balanceContent}>
-          <View style={styles.balanceHeader}>
-            <View style={styles.balanceLabelContainer}>
-              <Ionicons
-                name="wallet-outline"
-                size={16}
-                color={LIGHT_TEXT}
-              />
-              <Text style={styles.balanceLabel}>Total Balance</Text>
-            </View>
-            <TouchableOpacity
-              onPress={toggleBalanceVisibility}
-              style={styles.eyeButton}
-            >
-              <Ionicons
-                name={showBalance ? "eye-outline" : "eye-off-outline"}
-                size={20}
-                color={LIGHT_TEXT}
-              />
-            </TouchableOpacity>
+  const handleBalancePress = () => {
+    // Use the navigation prop passed to HomeScreen
+    navigation.navigate("CouponTransaction");
+  };
+
+  return (
+    <View style={[styles.card, styles.balanceCard]}>
+      <View style={styles.balanceContent}>
+        <View style={styles.balanceHeader}>
+          <View style={styles.balanceLabelContainer}>
+            <Ionicons
+              name="wallet-outline"
+              size={16}
+              color={LIGHT_TEXT}
+            />
+            <Text style={styles.balanceLabel}>Total Balance</Text>
           </View>
-          <View style={styles.balanceAmountContainer}>
+          <TouchableOpacity
+            onPress={toggleBalanceVisibility}
+            style={styles.eyeButton}
+          >
+            <Ionicons
+              name={showBalance ? "eye-outline" : "eye-off-outline"}
+              size={20}
+              color={LIGHT_TEXT}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.balanceAmountContainer}>
+          <TouchableOpacity onPress={handleBalancePress} activeOpacity={0.7}>
             <Animated.View
               style={{
                 opacity: balanceOpacity,
@@ -496,59 +514,60 @@ const HomeScreen = ({
               </Text>
               <Text style={styles.balanceCurrency}> USD</Text>
             </Animated.View>
+          </TouchableOpacity>
+        </View>
+        {showBalance && (showIncrease || showDecrease) && (
+          <View
+            style={[
+              styles.balanceChangeContainer,
+              showIncrease ? styles.balanceIncrease : styles.balanceDecrease,
+            ]}
+          >
+            <Ionicons
+              name={showIncrease ? "trending-up" : "trending-down"}
+              size={14}
+              color={WHITE}
+            />
+            <Text style={styles.balanceChangeText}>
+              {showIncrease ? "+" : ""}${Math.abs(balanceChange).toFixed(2)}
+            </Text>
+            <View style={styles.balanceChangeSeparator} />
+            <Text style={styles.balanceChangeLabel}>
+              {showIncrease ? "This week" : "This week"}
+            </Text>
           </View>
-          {showBalance && (showIncrease || showDecrease) && (
+        )}
+        <View style={styles.balanceFooter}>
+          <View style={styles.statusIndicator}>
             <View
               style={[
-                styles.balanceChangeContainer,
-                showIncrease ? styles.balanceIncrease : styles.balanceDecrease,
+                styles.statusDot,
+                { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
               ]}
-            >
-              <Ionicons
-                name={showIncrease ? "trending-up" : "trending-down"}
-                size={14}
-                color={WHITE}
-              />
-              <Text style={styles.balanceChangeText}>
-                {showIncrease ? "+" : ""}${Math.abs(balanceChange).toFixed(2)}
-              </Text>
-              <View style={styles.balanceChangeSeparator} />
-              <Text style={styles.balanceChangeLabel}>
-                {showIncrease ? "This week" : "This week"}
-              </Text>
-            </View>
-          )}
-          <View style={styles.balanceFooter}>
-            <View style={styles.statusIndicator}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
-                ]}
-              />
-              <Text style={styles.statusText}>
-                {showIncrease ? "Active" : "Updated"}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={onRefresh}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <ActivityIndicator size="small" color={PRIMARY_BLUE} />
-              ) : (
-                <>
-                  <Ionicons name="refresh-outline" size={16} color={PRIMARY_BLUE} />
-                  <Text style={styles.refreshText}>Refresh</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            />
+            <Text style={styles.statusText}>
+              {showIncrease ? "Active" : "Updated"}
+            </Text>
           </View>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={onRefresh}
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={PRIMARY_BLUE} />
+            ) : (
+              <>
+                <Ionicons name="refresh-outline" size={16} color={PRIMARY_BLUE} />
+                <Text style={styles.refreshText}>Refresh</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
-    );
-  };
+    </View>
+  );
+};
 
   const QuickActions = () => (
     <View style={styles.quickActionsWrapper}>
