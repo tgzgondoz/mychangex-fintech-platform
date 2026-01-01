@@ -819,7 +819,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: height * 0.1, // Adds top padding to center vertically
+    paddingTop: height * 0.1,
   },
   errorText: {
     fontSize: 24,
@@ -883,8 +883,6 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   qrCard: {
     width: width * 0.85,
@@ -961,8 +959,6 @@ const styles = StyleSheet.create({
   viewTransactionsButton: {
     backgroundColor: CARD_BG,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
     marginTop: 24,
     width: width * 0.85,
     maxWidth: 400,
@@ -1021,8 +1017,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -1045,8 +1039,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   modalButtonConfirm: {
     flex: 1,
