@@ -15,6 +15,7 @@ import {
   Dimensions,
   Pressable,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -23,15 +24,18 @@ import { getUserSession, getUserProfile } from './supabase';
 
 const { width, height } = Dimensions.get('window');
 
-// Match HomeScreen color scheme
+// Updated to match HomeScreen color scheme
 const PRIMARY_BLUE = "#0136c0";
 const ACCENT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#f5f8ff";
 const WHITE = "#ffffff";
-const LIGHT_TEXT = "#e9edf9";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
 const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const UtilitiesScreen = () => {
   const navigation = useNavigation();
@@ -45,7 +49,7 @@ const UtilitiesScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Utility categories with their services
+  // Utility categories with their services - keep colors but adjust for light theme
   const utilityCategories = [
     {
       id: 'electricity',
@@ -355,7 +359,7 @@ const UtilitiesScreen = () => {
     return 'Enter account number';
   };
 
-  const renderIcon = (iconType, iconName, size = 24, color = WHITE) => {
+  const renderIcon = (iconType, iconName, size = 24, color = PRIMARY_BLUE) => {
     switch (iconType) {
       case 'ionicons':
         return <Ionicons name={iconName} size={size} color={color} />;
@@ -376,225 +380,225 @@ const UtilitiesScreen = () => {
   if (loading) {
     return (
       <View style={styles.background}>
-        <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
-        <LinearGradient
-          colors={["#0136c0", "#0136c0"]}
-          style={styles.gradientBackground}
-        >
-          <SafeAreaView style={styles.safeArea}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={WHITE} />
-              <Text style={styles.loadingText}>Loading...</Text>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Bill Payments</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={PRIMARY_BLUE} />
+            <Text style={styles.loadingText}>Loading bill payments...</Text>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
 
   return (
     <View style={styles.background}>
-      <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
-      <LinearGradient
-        colors={["#0136c0", "#0136c0"]}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+      <SafeAreaView style={styles.safeArea}>
+        
+        {/* Header - Match HomeScreen */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+          </TouchableOpacity>
           
-          {/* Header - Match HomeScreen */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
+          <View style={styles.headerCenter}>
+            <Ionicons name="receipt-outline" size={22} color={PRIMARY_BLUE} />
+            <Text style={styles.headerTitle}>Bill Payments</Text>
+          </View>
+          
+          <View style={styles.balanceContainer}>
+            <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={PRIMARY_BLUE}
+              colors={[PRIMARY_BLUE]}
+              title="Refreshing..."
+              titleColor={DARK_TEXT}
+            />
+          }
+        >
+          {/* Welcome Section - Match HomeScreen cards */}
+          <View style={[styles.card, styles.welcomeCard]}>
+            <LinearGradient
+              colors={[LIGHT_BLUE, "#e8f0ff"]}
+              style={styles.welcomeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <Ionicons name="arrow-back" size={24} color={WHITE} />
-            </TouchableOpacity>
-            
-            <View style={styles.headerCenter}>
-              <Ionicons name="receipt-outline" size={22} color={WHITE} />
-              <Text style={styles.headerTitle}>Bill Payments</Text>
-            </View>
-            
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
-            </View>
+              <Ionicons name="checkmark-circle" size={40} color={PRIMARY_BLUE} style={styles.welcomeIcon} />
+              <Text style={styles.welcomeTitle}>Pay Your Bills Securely</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Quick and secure bill payments for all your utilities and services
+              </Text>
+            </LinearGradient>
           </View>
 
-          <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Welcome Section - Match HomeScreen cards */}
-            <View style={[styles.card, styles.welcomeCard]}>
-              <LinearGradient
-                colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                style={styles.welcomeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.welcomeTitle}>Pay Your Bills</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  Quick and secure bill payments for all your utilities and services
-                </Text>
-              </LinearGradient>
-            </View>
-
-            {/* Utility Categories */}
-            {utilityCategories.map((category) => (
-              <View key={category.id} style={styles.categorySection}>
-                <View style={styles.categoryHeader}>
-                  <LinearGradient
-                    colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                    style={styles.categoryIconContainer}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {renderIcon(category.iconType, category.icon, 20, WHITE)}
-                  </LinearGradient>
-                  <Text style={styles.categoryTitle}>{category.title}</Text>
+          {/* Utility Categories */}
+          {utilityCategories.map((category) => (
+            <View key={category.id} style={styles.categorySection}>
+              <View style={styles.categoryHeader}>
+                <View style={[styles.categoryIconContainer, { backgroundColor: category.color + '15' }]}>
+                  {renderIcon(category.iconType, category.icon, 20, category.color)}
                 </View>
-                
-                <View style={styles.servicesGrid}>
-                  {category.services.map((service) => (
+                <Text style={styles.categoryTitle}>{category.title}</Text>
+              </View>
+              
+              <View style={styles.servicesGrid}>
+                {category.services.map((service) => (
+                  <TouchableOpacity
+                    key={service.id}
+                    style={styles.serviceCard}
+                    onPress={() => handleUtilitySelect(service)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.serviceContent}>
+                      <View style={styles.serviceHeader}>
+                        <View style={[styles.serviceIconContainer, { backgroundColor: category.color + '15' }]}>
+                          {renderIcon(service.iconType, service.icon, 20, category.color)}
+                        </View>
+                        <View style={styles.serviceInfo}>
+                          <Text style={styles.serviceName}>{service.name}</Text>
+                          <Text style={styles.serviceDescription}>{service.description}</Text>
+                        </View>
+                        <Ionicons 
+                          name="chevron-forward" 
+                          size={20} 
+                          color={LIGHT_TEXT}
+                        />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Payment Modal - Match HomeScreen modal */}
+        <Modal
+          visible={isPaymentModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => !processingPayment && setIsPaymentModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable 
+              style={styles.modalBackdrop} 
+              onPress={() => !processingPayment && setIsPaymentModalVisible(false)}
+            />
+            <View style={styles.modalContent}>
+              {selectedUtility && (
+                <>
+                  <View style={styles.modalHeader}>
+                    <View style={styles.modalTitleContainer}>
+                      {renderIcon(selectedUtility.iconType, selectedUtility.icon, 24, PRIMARY_BLUE)}
+                      <Text style={styles.modalTitle}>Pay {selectedUtility.name}</Text>
+                    </View>
+                    {!processingPayment && (
+                      <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}>
+                        <Ionicons name="close" size={24} color="#666" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <View style={styles.paymentForm}>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.formLabel}>
+                        {getFieldLabel(selectedUtility)}
+                      </Text>
+                      <View style={styles.textInputWrapper}>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder={getFieldPlaceholder(selectedUtility)}
+                          placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                          value={accountNumber}
+                          onChangeText={setAccountNumber}
+                          keyboardType="default"
+                          autoCapitalize="none"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.formLabel}>Amount ($)</Text>
+                      <View style={styles.amountInputWrapper}>
+                        <Text style={styles.currencySymbol}>$</Text>
+                        <TextInput
+                          style={styles.amountInput}
+                          placeholder="Enter amount"
+                          placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                          value={paymentAmount}
+                          onChangeText={setPaymentAmount}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                      <Text style={styles.amountHint}>Minimum amount: $1.00</Text>
+                    </View>
+
+                    <View style={styles.balanceInfo}>
+                      <View style={styles.balanceInfoRow}>
+                        <Ionicons name="wallet-outline" size={16} color="#666" />
+                        <Text style={styles.balanceLabel}>Available Balance:</Text>
+                      </View>
+                      <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
+                    </View>
+
                     <TouchableOpacity
-                      key={service.id}
-                      style={styles.serviceCard}
-                      onPress={() => handleUtilitySelect(service)}
+                      style={[
+                        styles.payButton,
+                        processingPayment && styles.payButtonDisabled
+                      ]}
+                      onPress={handlePayment}
+                      disabled={processingPayment}
                     >
                       <LinearGradient
-                        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
-                        style={styles.serviceGradient}
+                        colors={[SUCCESS_GREEN, "#00E676"]}
+                        style={styles.payButtonGradient}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                       >
-                        <View style={styles.serviceHeader}>
-                          <View style={styles.serviceIconContainer}>
-                            {renderIcon(service.iconType, service.icon, 20, WHITE)}
-                          </View>
-                          <View style={styles.serviceInfo}>
-                            <Text style={styles.serviceName}>{service.name}</Text>
-                            <Text style={styles.serviceDescription}>{service.description}</Text>
-                          </View>
-                          <Ionicons 
-                            name="chevron-forward" 
-                            size={20} 
-                            color="rgba(255, 255, 255, 0.5)" 
-                          />
-                        </View>
+                        {processingPayment ? (
+                          <ActivityIndicator color={WHITE} />
+                        ) : (
+                          <>
+                            <Ionicons name="checkmark-circle-outline" size={20} color={WHITE} />
+                            <Text style={styles.payButtonText}>
+                              Pay ${paymentAmount || '0.00'}
+                            </Text>
+                          </>
+                        )}
                       </LinearGradient>
                     </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Payment Modal - Match HomeScreen modal */}
-          <Modal
-            visible={isPaymentModalVisible}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => !processingPayment && setIsPaymentModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <Pressable 
-                style={styles.modalBackdrop} 
-                onPress={() => !processingPayment && setIsPaymentModalVisible(false)}
-              />
-              <View style={styles.modalContent}>
-                {selectedUtility && (
-                  <>
-                    <View style={styles.modalHeader}>
-                      <View style={styles.modalTitleContainer}>
-                        {renderIcon(selectedUtility.iconType, selectedUtility.icon, 24, PRIMARY_BLUE)}
-                        <Text style={styles.modalTitle}>Pay {selectedUtility.name}</Text>
-                      </View>
-                      {!processingPayment && (
-                        <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}>
-                          <Ionicons name="close" size={24} color="#666" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    <View style={styles.paymentForm}>
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.formLabel}>
-                          {getFieldLabel(selectedUtility)}
-                        </Text>
-                        <View style={styles.textInputWrapper}>
-                          <TextInput
-                            style={styles.textInput}
-                            placeholder={getFieldPlaceholder(selectedUtility)}
-                            placeholderTextColor="rgba(0, 0, 0, 0.4)"
-                            value={accountNumber}
-                            onChangeText={setAccountNumber}
-                            keyboardType="default"
-                            autoCapitalize="none"
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.formLabel}>Amount ($)</Text>
-                        <View style={styles.amountInputWrapper}>
-                          <Text style={styles.currencySymbol}>$</Text>
-                          <TextInput
-                            style={styles.amountInput}
-                            placeholder="Enter amount"
-                            placeholderTextColor="rgba(0, 0, 0, 0.4)"
-                            value={paymentAmount}
-                            onChangeText={setPaymentAmount}
-                            keyboardType="decimal-pad"
-                          />
-                        </View>
-                        <Text style={styles.amountHint}>Minimum amount: $1.00</Text>
-                      </View>
-
-                      <View style={styles.balanceInfo}>
-                        <View style={styles.balanceInfoRow}>
-                          <Ionicons name="wallet-outline" size={16} color="#666" />
-                          <Text style={styles.balanceLabel}>Available Balance:</Text>
-                        </View>
-                        <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
-                      </View>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.payButton,
-                          processingPayment && styles.payButtonDisabled
-                        ]}
-                        onPress={handlePayment}
-                        disabled={processingPayment}
-                      >
-                        <LinearGradient
-                          colors={[SUCCESS_GREEN, "#00E676"]}
-                          style={styles.payButtonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          {processingPayment ? (
-                            <ActivityIndicator color={WHITE} />
-                          ) : (
-                            <>
-                              <Ionicons name="checkmark-circle-outline" size={20} color={WHITE} />
-                              <Text style={styles.payButtonText}>
-                                Pay ${paymentAmount || '0.00'}
-                              </Text>
-                            </>
-                          )}
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
+                  </View>
+                </>
+              )}
             </View>
-          </Modal>
-        </SafeAreaView>
-      </LinearGradient>
+          </View>
+        </Modal>
+      </SafeAreaView>
     </View>
   );
 };
@@ -602,14 +606,12 @@ const UtilitiesScreen = () => {
 const styles = StyleSheet.create({
   background: { 
     flex: 1, 
-    backgroundColor: "#0136c0" 
-  },
-  gradientBackground: { 
-    flex: 1 
+    backgroundColor: BACKGROUND_COLOR 
   },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: BACKGROUND_COLOR,
   },
   container: {
     flex: 1,
@@ -625,9 +627,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     marginTop: 16,
+    fontWeight: '500',
   },
   header: {
     flexDirection: 'row',
@@ -635,59 +638,70 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    marginBottom: 5,
+    backgroundColor: BACKGROUND_COLOR,
+    borderBottomWidth: 1,
+    borderBottomColor: CARD_BORDER,
   },
   backButton: {
     padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
   },
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: '700',
     marginLeft: 10,
-    letterSpacing: 0.5,
+  },
+  headerSpacer: {
+    width: 40,
   },
   balanceContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: LIGHT_BLUE,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d9e4ff',
   },
   balanceText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: '600',
   },
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 0,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
+    overflow: 'hidden',
   },
   welcomeCard: {
-    padding: 0,
-    overflow: 'hidden',
+    marginBottom: 24,
   },
   welcomeGradient: {
     padding: 24,
-    borderRadius: 20,
+    alignItems: 'center',
+  },
+  welcomeIcon: {
+    marginBottom: 12,
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 8,
     textAlign: 'center',
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: LIGHT_TEXT,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -706,25 +720,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   categoryTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: WHITE,
-    letterSpacing: 0.3,
+    color: DARK_TEXT,
   },
   servicesGrid: {
     gap: 12,
   },
   serviceCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
-  serviceGradient: {
+  serviceContent: {
     padding: 16,
-    borderRadius: 20,
   },
   serviceHeader: {
     flexDirection: 'row',
@@ -734,12 +746,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   serviceInfo: {
     flex: 1,
@@ -747,12 +756,12 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 4,
   },
   serviceDescription: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: LIGHT_TEXT,
     lineHeight: 16,
   },
   modalOverlay: {
@@ -797,7 +806,7 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: DARK_TEXT,
   },
   textInputWrapper: {
     backgroundColor: '#f9f9f9',
@@ -809,7 +818,7 @@ const styles = StyleSheet.create({
   textInput: {
     padding: 16,
     fontSize: 16,
-    color: '#333',
+    color: DARK_TEXT,
   },
   amountInputWrapper: {
     flexDirection: 'row',
@@ -824,19 +833,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: DARK_TEXT,
   },
   amountInput: {
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: '#333',
+    color: DARK_TEXT,
     borderLeftWidth: 1,
     borderLeftColor: '#ddd',
   },
   amountHint: {
     fontSize: 12,
-    color: '#666',
+    color: LIGHT_TEXT,
     fontStyle: 'italic',
     marginLeft: 4,
   },
@@ -855,7 +864,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#666',
+    color: LIGHT_TEXT,
     fontWeight: '500',
   },
   balanceAmount: {
@@ -867,11 +876,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   payButtonGradient: {
     padding: 18,
