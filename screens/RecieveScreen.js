@@ -654,7 +654,7 @@ const ReceiveScreen = () => {
                     <View style={styles.qrCodeWrapper}>
                       <QRCode
                         value={qrData}
-                        size={width * 0.6}
+                        size={width * 0.7}  
                         color={PRIMARY_BLUE}
                         backgroundColor={WHITE}
                         logo={LOGO}
@@ -954,7 +954,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewTransactionsButton: {
-   
     borderRadius: 12,
     marginTop: 24,
     width: width * 0.85,
