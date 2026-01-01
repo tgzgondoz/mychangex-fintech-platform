@@ -16,6 +16,7 @@ import {
   Modal,
   Image,
   Pressable,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,15 +25,18 @@ import { getUserSession, getUserProfile } from "./supabase";
 
 const { width, height } = Dimensions.get("window");
 
-// Match HomeScreen color scheme
+// Updated to match HomeScreen color scheme
 const PRIMARY_BLUE = "#0136c0";
 const ACCENT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#f5f8ff";
 const WHITE = "#ffffff";
-const LIGHT_TEXT = "#e9edf9";
-const CARD_BG = "rgba(255, 255, 255, 0.08)";
-const CARD_BORDER = "rgba(255, 255, 255, 0.15)";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
 const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 // Import your image assets
 const econetLogo = require("../assets/econet-wireless-logo.png");
@@ -52,8 +56,9 @@ const AirtimeScreen = () => {
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userPhoneNumber, setUserPhoneNumber] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Network providers data - match HomeScreen design
+  // Network providers data
   const networks = [
     {
       id: "econet",
@@ -63,7 +68,6 @@ const AirtimeScreen = () => {
       description: "Econet Wireless Zimbabwe",
       prefix: "077, 078",
       quickAmounts: [1, 2, 5, 10, 20, 50],
-      gradient: ["#0136c0", "#0136c0"], // Match HomeScreen gradient
     },
     {
       id: "netone",
@@ -73,7 +77,6 @@ const AirtimeScreen = () => {
       description: "NetOne Cellular",
       prefix: "071",
       quickAmounts: [1, 2, 5, 10, 20, 50],
-      gradient: ["#0136c0", "#0136c0"], // Match HomeScreen gradient
     },
     {
       id: "telecel",
@@ -83,7 +86,6 @@ const AirtimeScreen = () => {
       description: "Telecel Zimbabwe",
       prefix: "073",
       quickAmounts: [1, 2, 5, 10, 20, 50],
-      gradient: ["#0136c0", "#0136c0"], // Match HomeScreen gradient
     },
   ];
 
@@ -124,6 +126,7 @@ const AirtimeScreen = () => {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -280,375 +283,358 @@ const AirtimeScreen = () => {
     setPhoneNumber(userPhoneNumber);
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserData();
+  };
+
   if (loading) {
     return (
       <View style={styles.background}>
-        <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
-        <LinearGradient
-          colors={["#0136c0", "#0136c0"]}
-          style={styles.gradientBackground}
-        >
-          <SafeAreaView style={styles.safeArea}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={WHITE} />
-              <Text style={styles.loadingText}>Loading...</Text>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Buy Airtime</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={PRIMARY_BLUE} />
+            <Text style={styles.loadingText}>Loading airtime purchase...</Text>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
 
   return (
     <View style={styles.background}>
-      <StatusBar barStyle="light-content" backgroundColor="#0136c0" />
-      <LinearGradient
-        colors={["#0136c0", "#0136c0"]}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          {/* Header - Match HomeScreen header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={WHITE} />
-            </TouchableOpacity>
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header - Match HomeScreen */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={DARK_TEXT} />
+          </TouchableOpacity>
 
-            <View style={styles.headerCenter}>
-              <Ionicons name="phone-portrait-outline" size={22} color={WHITE} />
-              <Text style={styles.headerTitle}>Buy Airtime</Text>
-            </View>
-
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
-            </View>
+          <View style={styles.headerCenter}>
+            <Ionicons name="phone-portrait-outline" size={22} color={PRIMARY_BLUE} />
+            <Text style={styles.headerTitle}>Buy Airtime</Text>
           </View>
 
-          <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Welcome Section - Match HomeScreen cards */}
-            <View style={[styles.card, styles.welcomeCard]}>
-              <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.1)",
-                  "rgba(255, 255, 255, 0.05)",
-                ]}
-                style={styles.welcomeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.welcomeTitle}>Buy Airtime</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  Instant airtime top-up for all networks in Zimbabwe
-                </Text>
-              </LinearGradient>
-            </View>
+          <View style={styles.balanceContainer}>
+            <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
+          </View>
+        </View>
 
-            {/* Network Selection - Match HomeScreen design */}
-            <View style={styles.section}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={PRIMARY_BLUE}
+              colors={[PRIMARY_BLUE]}
+              title="Refreshing..."
+              titleColor={DARK_TEXT}
+            />
+          }
+        >
+          {/* Welcome Section - Match HomeScreen cards */}
+          <View style={[styles.card, styles.welcomeCard]}>
+            <LinearGradient
+              colors={[LIGHT_BLUE, "#e8f0ff"]}
+              style={styles.welcomeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="flash" size={40} color={PRIMARY_BLUE} style={styles.welcomeIcon} />
+              <Text style={styles.welcomeTitle}>Buy Airtime</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Instant airtime top-up for all networks in Zimbabwe
+              </Text>
+            </LinearGradient>
+          </View>
+
+          {/* Network Selection */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Select Network</Text>
               <Text style={styles.sectionSubtitle}>
                 Choose your mobile network provider
               </Text>
-              <View style={styles.networksContainer}>
-                {networks.map((network) => (
-                  <TouchableOpacity
-                    key={network.id}
-                    style={[
-                      styles.card,
-                      styles.networkCard,
-                      selectedNetwork?.id === network.id &&
-                        styles.networkCardSelected,
-                    ]}
-                    onPress={() => handleNetworkSelect(network)}
-                  >
-                    <LinearGradient
-                      colors={
-                        selectedNetwork?.id === network.id
-                          ? network.gradient
-                          : [
-                              "rgba(255, 255, 255, 0.1)",
-                              "rgba(255, 255, 255, 0.05)",
-                            ]
-                      }
-                      style={styles.networkGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={styles.networkHeader}>
-                        <View
+            </View>
+            <View style={styles.networksContainer}>
+              {networks.map((network) => (
+                <TouchableOpacity
+                  key={network.id}
+                  style={[
+                    styles.card,
+                    styles.networkCard,
+                    selectedNetwork?.id === network.id &&
+                      styles.networkCardSelected,
+                  ]}
+                  onPress={() => handleNetworkSelect(network)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.networkContent}>
+                    <View style={styles.networkHeader}>
+                      <View style={[
+                        styles.networkIconContainer,
+                        { backgroundColor: network.color + '15' }
+                      ]}>
+                        <Image
+                          source={network.icon}
+                          style={styles.networkImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <View style={styles.networkInfo}>
+                        <Text
                           style={[
-                            styles.networkIconContainer,
+                            styles.networkName,
                             selectedNetwork?.id === network.id &&
-                              styles.networkIconContainerSelected,
+                              styles.networkNameSelected,
                           ]}
                         >
-                          <Image
-                            source={network.icon}
-                            style={styles.networkImage}
-                            resizeMode="contain"
-                          />
-                        </View>
-                        <View style={styles.networkInfo}>
-                          <Text
-                            style={[
-                              styles.networkName,
-                              selectedNetwork?.id === network.id &&
-                                styles.networkNameSelected,
-                            ]}
-                          >
-                            {network.name}
-                          </Text>
-                          <Text style={styles.networkDescription}>
-                            {network.description}
-                          </Text>
-                        </View>
-                        {selectedNetwork?.id === network.id && (
-                          <View style={styles.selectedIndicator}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={20}
-                              color={WHITE}
-                            />
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.networkFooter}>
-                        <Text style={styles.networkPrefix}>
-                          Numbers: {network.prefix}
+                          {network.name}
+                        </Text>
+                        <Text style={styles.networkDescription}>
+                          {network.description}
                         </Text>
                       </View>
-                    </LinearGradient>
+                      {selectedNetwork?.id === network.id && (
+                        <View style={styles.selectedIndicator}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={PRIMARY_BLUE}
+                          />
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.networkFooter}>
+                      <Text style={styles.networkPrefix}>
+                        Numbers: {network.prefix}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Phone Number Input */}
+          {selectedNetwork && (
+            <View style={[styles.card, styles.inputCard]}>
+              <Text style={styles.inputLabel}>Enter Phone Number</Text>
+              <View style={styles.phoneInputContainer}>
+                <View style={styles.phoneInputWrapper}>
+                  <TextInput
+                    style={styles.phoneInput}
+                    placeholder={`Enter ${selectedNetwork.name} number`}
+                    placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={15}
+                  />
+                </View>
+                {userPhoneNumber && (
+                  <TouchableOpacity
+                    style={styles.useMyNumberButton}
+                    onPress={useMyNumber}
+                  >
+                    <View style={styles.useMyNumberContent}>
+                      <Ionicons name="person" size={16} color={PRIMARY_BLUE} />
+                      <Text style={styles.useMyNumberText}>My Number</Text>
+                    </View>
                   </TouchableOpacity>
-                ))}
+                )}
+              </View>
+              <Text style={styles.phoneHint}>
+                {selectedNetwork.name} numbers start with{" "}
+                {selectedNetwork.prefix}
+              </Text>
+            </View>
+          )}
+
+          {/* Amount Selection */}
+          {selectedNetwork && phoneNumber && (
+            <View style={[styles.card, styles.amountsCard]}>
+              <Text style={styles.amountsTitle}>Select Amount</Text>
+
+              {/* Quick Amounts */}
+              <View style={styles.amountsContainer}>
+                <Text style={styles.amountSectionTitle}>Quick Select</Text>
+                <View style={styles.amountsGrid}>
+                  {selectedNetwork.quickAmounts.map((amount) => (
+                    <TouchableOpacity
+                      key={amount}
+                      style={[
+                        styles.amountButton,
+                        airtimeAmount === amount.toString() &&
+                          styles.amountButtonSelected,
+                      ]}
+                      onPress={() => handleAmountSelect(amount)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.amountButtonContent}>
+                        <Text
+                          style={[
+                            styles.amountButtonText,
+                            airtimeAmount === amount.toString() &&
+                              styles.amountButtonTextSelected,
+                          ]}
+                        >
+                          ${amount}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Custom Amount */}
+              <View style={styles.customAmountContainer}>
+                <Text style={styles.amountSectionTitle}>Custom Amount</Text>
+                <View style={styles.customAmountWrapper}>
+                  <Text style={styles.currencySymbol}>$</Text>
+                  <TextInput
+                    style={styles.customAmountInput}
+                    placeholder="Enter amount"
+                    placeholderTextColor="rgba(0, 0, 0, 0.4)"
+                    value={customAmount}
+                    onChangeText={handleCustomAmountChange}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <Text style={styles.amountHint}>Minimum amount: $0.50</Text>
               </View>
             </View>
+          )}
 
-            {/* Phone Number Input - Match HomeScreen input styles */}
-            {selectedNetwork && (
-              <View style={[styles.card, styles.inputCard]}>
-                <Text style={styles.inputLabel}>Enter Phone Number</Text>
-                <View style={styles.phoneInputContainer}>
-                  <View style={styles.phoneInputWrapper}>
-                    <TextInput
-                      style={styles.phoneInput}
-                      placeholder={`Enter ${selectedNetwork.name} number`}
-                      placeholderTextColor="rgba(255, 255, 255, 0.6)"
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                      keyboardType="phone-pad"
-                      maxLength={15}
-                    />
-                  </View>
-                  {userPhoneNumber && (
-                    <TouchableOpacity
-                      style={styles.useMyNumberButton}
-                      onPress={useMyNumber}
-                    >
-                      <LinearGradient
-                        colors={[
-                          "rgba(255, 255, 255, 0.1)",
-                          "rgba(255, 255, 255, 0.05)",
-                        ]}
-                        style={styles.useMyNumberGradient}
-                      >
-                        <Ionicons name="person" size={16} color={WHITE} />
-                        <Text style={styles.useMyNumberText}>My Number</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={styles.phoneHint}>
-                  {selectedNetwork.name} numbers start with{" "}
-                  {selectedNetwork.prefix}
-                </Text>
-              </View>
-            )}
-
-            {/* Amount Selection - Match HomeScreen buttons */}
-            {selectedNetwork && phoneNumber && (
-              <View style={[styles.card, styles.amountsCard]}>
-                <Text style={styles.amountsTitle}>Select Amount</Text>
-
-                {/* Quick Amounts */}
-                <View style={styles.amountsContainer}>
-                  <Text style={styles.amountSectionTitle}>Quick Select</Text>
-                  <View style={styles.amountsGrid}>
-                    {selectedNetwork.quickAmounts.map((amount) => (
-                      <TouchableOpacity
-                        key={amount}
-                        style={[
-                          styles.amountButton,
-                          airtimeAmount === amount.toString() && [
-                            styles.amountButtonSelected,
-                            { borderColor: WHITE },
-                          ],
-                        ]}
-                        onPress={() => handleAmountSelect(amount)}
-                      >
-                        <LinearGradient
-                          colors={
-                            airtimeAmount === amount.toString()
-                              ? [
-                                  "rgba(255, 255, 255, 0.2)",
-                                  "rgba(255, 255, 255, 0.1)",
-                                ]
-                              : [
-                                  "rgba(255, 255, 255, 0.1)",
-                                  "rgba(255, 255, 255, 0.05)",
-                                ]
-                          }
-                          style={styles.amountButtonGradient}
-                        >
-                          <Text
-                            style={[
-                              styles.amountButtonText,
-                              airtimeAmount === amount.toString() &&
-                                styles.amountButtonTextSelected,
-                            ]}
-                          >
-                            ${amount}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Custom Amount */}
-                <View style={styles.customAmountContainer}>
-                  <Text style={styles.amountSectionTitle}>Custom Amount</Text>
-                  <View style={styles.customAmountWrapper}>
-                    <Text style={styles.currencySymbol}>$</Text>
-                    <TextInput
-                      style={styles.customAmountInput}
-                      placeholder="Enter amount"
-                      placeholderTextColor="rgba(255, 255, 255, 0.6)"
-                      value={customAmount}
-                      onChangeText={handleCustomAmountChange}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                  <Text style={styles.amountHint}>Minimum amount: $0.50</Text>
-                </View>
-              </View>
-            )}
-
-            {/* Buy Button - Match HomeScreen action buttons */}
-            {selectedNetwork &&
-              phoneNumber &&
-              (airtimeAmount || customAmount) && (
-                <TouchableOpacity
-                  style={styles.buyButton}
-                  onPress={handleBuyAirtime}
+          {/* Buy Button */}
+          {selectedNetwork &&
+            phoneNumber &&
+            (airtimeAmount || customAmount) && (
+              <TouchableOpacity
+                style={styles.buyButton}
+                onPress={handleBuyAirtime}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={[SUCCESS_GREEN, "#00E676"]}
+                  style={styles.buyButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
-                  <LinearGradient
-                    colors={[SUCCESS_GREEN, "#00E676"]}
-                    style={styles.buyButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="flash" size={20} color={WHITE} />
-                    <Text style={styles.buyButtonText}>
-                      Buy {formatCurrency(customAmount || airtimeAmount)}{" "}
-                      Airtime
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
-          </ScrollView>
+                  <Ionicons name="flash" size={20} color={WHITE} />
+                  <Text style={styles.buyButtonText}>
+                    Buy {formatCurrency(customAmount || airtimeAmount)}{" "}
+                    Airtime
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+        </ScrollView>
 
-          {/* Confirmation Modal - Match HomeScreen modal */}
-          <Modal
-            visible={isPaymentModalVisible}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() =>
-              !processingPayment && setIsPaymentModalVisible(false)
-            }
-          >
-            <View style={styles.modalOverlay}>
-              <Pressable
-                style={styles.modalBackdrop}
-                onPress={() =>
-                  !processingPayment && setIsPaymentModalVisible(false)
-                }
-              />
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
+        {/* Confirmation Modal */}
+        <Modal
+          visible={isPaymentModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() =>
+            !processingPayment && setIsPaymentModalVisible(false)
+          }
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() =>
+                !processingPayment && setIsPaymentModalVisible(false)
+              }
+            />
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleContainer}>
+                  <Ionicons name="phone-portrait-outline" size={24} color={PRIMARY_BLUE} />
                   <Text style={styles.modalTitle}>
                     Confirm Airtime Purchase
                   </Text>
-                  {!processingPayment && (
-                    <TouchableOpacity
-                      onPress={() => setIsPaymentModalVisible(false)}
-                    >
-                      <Ionicons name="close" size={24} color="#0136c0" />
-                    </TouchableOpacity>
-                  )}
                 </View>
-
-                <View style={styles.confirmationDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Network:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedNetwork?.name}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Phone Number:</Text>
-                    <Text style={styles.detailValue}>
-                      {formatPhoneNumber(phoneNumber)}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Amount:</Text>
-                    <Text style={styles.detailValue}>
-                      {formatCurrency(customAmount || airtimeAmount)}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Your Balance:</Text>
-                    <Text style={styles.detailValue}>
-                      ${balance.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.confirmButton,
-                    processingPayment && styles.confirmButtonDisabled,
-                  ]}
-                  onPress={confirmPurchase}
-                  disabled={processingPayment}
-                >
-                  <LinearGradient
-                    colors={[SUCCESS_GREEN, "#00E676"]}
-                    style={styles.confirmButtonGradient}
+                {!processingPayment && (
+                  <TouchableOpacity
+                    onPress={() => setIsPaymentModalVisible(false)}
                   >
-                    {processingPayment ? (
-                      <ActivityIndicator color={WHITE} />
-                    ) : (
-                      <Text style={styles.confirmButtonText}>
-                        Confirm Purchase
-                      </Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <Ionicons name="close" size={24} color={LIGHT_TEXT} />
+                  </TouchableOpacity>
+                )}
               </View>
+
+              <View style={styles.confirmationDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Network:</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedNetwork?.name}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Phone Number:</Text>
+                  <Text style={styles.detailValue}>
+                    {formatPhoneNumber(phoneNumber)}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Amount:</Text>
+                  <Text style={styles.detailValue}>
+                    {formatCurrency(customAmount || airtimeAmount)}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Your Balance:</Text>
+                  <Text style={styles.detailValue}>
+                    ${balance.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.confirmButton,
+                  processingPayment && styles.confirmButtonDisabled,
+                ]}
+                onPress={confirmPurchase}
+                disabled={processingPayment}
+              >
+                <LinearGradient
+                  colors={[SUCCESS_GREEN, "#00E676"]}
+                  style={styles.confirmButtonGradient}
+                >
+                  {processingPayment ? (
+                    <ActivityIndicator color={WHITE} />
+                  ) : (
+                    <Text style={styles.confirmButtonText}>
+                      Confirm Purchase
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          </Modal>
-        </SafeAreaView>
-      </LinearGradient>
+          </View>
+        </Modal>
+      </SafeAreaView>
     </View>
   );
 };
@@ -656,14 +642,12 @@ const AirtimeScreen = () => {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: "#0136c0",
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
   },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    backgroundColor: BACKGROUND_COLOR,
   },
   container: {
     flex: 1,
@@ -679,9 +663,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     marginTop: 16,
+    fontWeight: '500',
   },
   header: {
     flexDirection: "row",
@@ -689,94 +674,102 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 15,
-    marginBottom: 5,
+    backgroundColor: BACKGROUND_COLOR,
+    borderBottomWidth: 1,
+    borderBottomColor: CARD_BORDER,
   },
   backButton: {
     padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
   },
   headerCenter: {
     flexDirection: "row",
     alignItems: "center",
   },
   headerTitle: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 20,
     fontWeight: "700",
     marginLeft: 10,
-    letterSpacing: 0.5,
+  },
+  headerSpacer: {
+    width: 40,
   },
   balanceContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: LIGHT_BLUE,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d9e4ff',
   },
   balanceText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: "600",
   },
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
+    marginBottom: 16,
   },
   welcomeCard: {
     padding: 0,
-    overflow: "hidden",
+    overflow: 'hidden',
+    marginBottom: 24,
   },
   welcomeGradient: {
     padding: 24,
-    borderRadius: 20,
+    alignItems: 'center',
+  },
+  welcomeIcon: {
+    marginBottom: 12,
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 8,
     textAlign: "center",
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: LIGHT_TEXT,
     textAlign: "center",
     lineHeight: 20,
   },
   section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: WHITE,
-    marginBottom: 8,
-    letterSpacing: 0.3,
+    color: DARK_TEXT,
+    marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.7)",
-    marginBottom: 16,
+    color: LIGHT_TEXT,
   },
   networksContainer: {
     gap: 12,
   },
   networkCard: {
     padding: 0,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   networkCardSelected: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 15,
+    borderColor: PRIMARY_BLUE,
+    borderWidth: 2,
   },
-  networkGradient: {
+  networkContent: {
     padding: 16,
-    borderRadius: 20,
   },
   networkHeader: {
     flexDirection: "row",
@@ -787,14 +780,10 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
     padding: 5,
-  },
-  networkIconContainerSelected: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
   networkImage: {
     width: "100%",
@@ -807,28 +796,28 @@ const styles = StyleSheet.create({
   networkName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.9)",
+    color: DARK_TEXT,
     marginBottom: 2,
   },
   networkNameSelected: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontWeight: "700",
   },
   networkDescription: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
   },
   selectedIndicator: {
     marginLeft: "auto",
   },
   networkFooter: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
+    borderTopColor: "#f0f0f0",
     paddingTop: 12,
   },
   networkPrefix: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     fontStyle: "italic",
   },
   inputCard: {
@@ -837,7 +826,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 12,
   },
   phoneInputContainer: {
@@ -847,35 +836,38 @@ const styles = StyleSheet.create({
   },
   phoneInputWrapper: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#f9f9f9",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#ddd",
   },
   phoneInput: {
     padding: 16,
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
   },
   useMyNumberButton: {
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
-  useMyNumberGradient: {
+  useMyNumberContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    backgroundColor: '#f9f9f9',
   },
   useMyNumberText: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: "600",
   },
   phoneHint: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: LIGHT_TEXT,
     marginTop: 8,
     fontStyle: "italic",
   },
@@ -885,7 +877,7 @@ const styles = StyleSheet.create({
   amountsTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: WHITE,
+    color: DARK_TEXT,
     marginBottom: 16,
   },
   amountsContainer: {
@@ -894,7 +886,7 @@ const styles = StyleSheet.create({
   amountSectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.8)",
+    color: LIGHT_TEXT,
     marginBottom: 12,
   },
   amountsGrid: {
@@ -904,26 +896,27 @@ const styles = StyleSheet.create({
   },
   amountButton: {
     borderRadius: 12,
-    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    backgroundColor: '#f9f9f9',
     minWidth: 80,
-    borderWidth: 2,
-    borderColor: "transparent",
   },
   amountButtonSelected: {
-    borderColor: WHITE,
+    backgroundColor: LIGHT_BLUE,
+    borderColor: PRIMARY_BLUE,
   },
-  amountButtonGradient: {
+  amountButtonContent: {
     paddingHorizontal: 20,
     paddingVertical: 14,
     alignItems: "center",
   },
   amountButtonText: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: "600",
   },
   amountButtonTextSelected: {
-    color: WHITE,
+    color: PRIMARY_BLUE,
   },
   customAmountContainer: {
     gap: 12,
@@ -931,14 +924,14 @@ const styles = StyleSheet.create({
   customAmountWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#f9f9f9",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#ddd",
     paddingHorizontal: 16,
   },
   currencySymbol: {
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: "600",
     marginRight: 8,
@@ -946,23 +939,18 @@ const styles = StyleSheet.create({
   customAmountInput: {
     flex: 1,
     paddingVertical: 16,
-    color: WHITE,
+    color: DARK_TEXT,
     fontSize: 16,
   },
   amountHint: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: LIGHT_TEXT,
     fontStyle: "italic",
   },
   buyButton: {
     borderRadius: 16,
     overflow: "hidden",
     marginTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   buyButtonGradient: {
     paddingVertical: 18,
@@ -999,6 +987,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
   },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   modalTitle: {
     fontSize: 22,
     fontWeight: "700",
@@ -1018,12 +1011,12 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 16,
-    color: "#666",
+    color: LIGHT_TEXT,
     fontWeight: "500",
   },
   detailValue: {
     fontSize: 16,
-    color: "#333",
+    color: DARK_TEXT,
     fontWeight: "600",
   },
   confirmButton: {
