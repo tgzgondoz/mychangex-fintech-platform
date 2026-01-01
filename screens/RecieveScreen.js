@@ -694,9 +694,7 @@ const ReceiveScreen = () => {
               onPress={() => navigation.navigate('TransactionHistory')}
             >
               <View style={styles.viewTransactionsButtonContent}>
-                <Ionicons name="receipt-outline" size={20} color={PRIMARY_BLUE} />
                 <Text style={styles.viewTransactionsButtonText}>View Transactions</Text>
-                <Ionicons name="chevron-forward" size={16} color={LIGHT_TEXT} />
               </View>
             </TouchableOpacity>
           </View>
@@ -881,7 +879,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    backgroundColor: CARD_BG,
     borderRadius: 16,
   },
   qrCard: {
@@ -957,7 +954,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewTransactionsButton: {
-    backgroundColor: CARD_BG,
+   
     borderRadius: 12,
     marginTop: 24,
     width: width * 0.85,
@@ -966,17 +963,13 @@ const styles = StyleSheet.create({
   viewTransactionsButtonContent: {
     paddingVertical: 18,
     paddingHorizontal: 24,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   viewTransactionsButtonText: {
-    color: DARK_TEXT,
+    color: PRIMARY_BLUE,
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    marginLeft: 12,
-    textAlign: 'center',
   },
   footerSpacer: {
     height: 40,
