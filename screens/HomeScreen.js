@@ -36,8 +36,7 @@ import { NotificationService } from "./services/notificationService";
 import { useIsFocused } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
-import { useNavigation } from '@react-navigation/native';
-
+import { useNavigation } from "@react-navigation/native";
 
 const { width, height } = Dimensions.get("window");
 const PRIMARY_BLUE = "#0136c0";
@@ -85,13 +84,13 @@ const HomeScreen = ({
   useEffect(() => {
     setUnreadNotificationsCount(unreadCount);
   }, [unreadCount]);
-  
+
   useEffect(() => {
     if (homeRefreshTrigger > 0) {
       handleAutoRefresh();
     }
   }, [homeRefreshTrigger, lastTransaction, isFocused]);
-  
+
   useEffect(() => {
     if (isFocused) {
       setTimeout(() => {
@@ -102,7 +101,7 @@ const HomeScreen = ({
       }, 300);
     }
   }, [isFocused, userData?.id]);
-  
+
   useLayoutEffect(() => {
     loadUserData();
   }, []);
@@ -226,14 +225,14 @@ const HomeScreen = ({
     setRefreshing(true);
     loadUserData();
   }, []);
-  
+
   const handlePressIn = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 0.96,
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
-  
+
   const handlePressOut = useCallback(() => {
     Animated.spring(buttonScale, {
       toValue: 1,
@@ -242,7 +241,7 @@ const HomeScreen = ({
       useNativeDriver: true,
     }).start();
   }, [buttonScale]);
-  
+
   const openSendModal = () => setIsSendModalVisible(true);
   const closeSendModal = () => setIsSendModalVisible(false);
 
@@ -268,7 +267,7 @@ const HomeScreen = ({
   const handleReceive = () => {
     navigation.navigate("Recieve");
   };
-  
+
   const handlePlatformSelect = (platform) => {
     closeSendModal();
     setTimeout(() => {
@@ -336,7 +335,7 @@ const HomeScreen = ({
     return (
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="wallet-outline" size={28} color={PRIMARY_BLUE} />
+          {/* Removed the Ionicons wallet icon */}
           <Text style={styles.headerTitle}>MyChangeX</Text>
         </View>
         <View style={styles.headerRight}>
@@ -344,7 +343,11 @@ const HomeScreen = ({
             style={styles.iconButton}
             onPress={handleNotificationPress}
           >
-            <Ionicons name="notifications-outline" size={24} color={DARK_TEXT} />
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={DARK_TEXT}
+            />
             {unreadNotificationsCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -365,7 +368,6 @@ const HomeScreen = ({
       </View>
     );
   };
-
   const ProfileCard = () => {
     const handleProfilePress = () => {
       navigation.navigate("Profile");
@@ -391,11 +393,7 @@ const HomeScreen = ({
               <Text style={styles.profileUsername}>Loading...</Text>
               <Text style={styles.profilePhone}>Please wait</Text>
             </View>
-            <Feather
-              name="chevron-right"
-              size={20}
-              color="#999"
-            />
+            <Feather name="chevron-right" size={20} color="#999" />
           </View>
         </TouchableOpacity>
       );
@@ -417,11 +415,7 @@ const HomeScreen = ({
                 Please check your connection
               </Text>
             </View>
-            <Feather
-              name="chevron-right"
-              size={20}
-              color="#999"
-            />
+            <Feather name="chevron-right" size={20} color="#999" />
           </View>
         </TouchableOpacity>
       );
@@ -453,132 +447,123 @@ const HomeScreen = ({
               {formatDisplayPhone(displayData.phone) || "No phone number"}
             </Text>
           </View>
-          <Feather
-            name="chevron-right"
-            size={20}
-            color="#999"
-          />
+          <Feather name="chevron-right" size={20} color="#999" />
         </View>
       </TouchableOpacity>
     );
   };
-const BalanceCard = () => {
-  // Use the navigation prop from HomeScreen, not create a new hook
-  // Remove: const navigation = useNavigation();
-  
-  const displayData = profileData || userData;
-  const balance = displayData?.balance || 0;
-  const balanceChange = previousBalance ? balance - previousBalance : 0;
-  const showIncrease = balanceChange > 0.01;
-  const showDecrease = balanceChange < -0.01;
 
-  const handleBalancePress = () => {
-    // Use the navigation prop passed to HomeScreen
-    navigation.navigate("CouponTransaction");
-  };
+  const BalanceCard = () => {
+    const displayData = profileData || userData;
+    const balance = displayData?.balance || 0;
+    const balanceChange = previousBalance ? balance - previousBalance : 0;
+    const showIncrease = balanceChange > 0.01;
+    const showDecrease = balanceChange < -0.01;
 
-  return (
-    <View style={[styles.card, styles.balanceCard]}>
-      <View style={styles.balanceContent}>
-        <View style={styles.balanceHeader}>
-          <View style={styles.balanceLabelContainer}>
-            <Ionicons
-              name="wallet-outline"
-              size={16}
-              color={LIGHT_TEXT}
-            />
-            <Text style={styles.balanceLabel}>Total Balance</Text>
-          </View>
-          <TouchableOpacity
-            onPress={toggleBalanceVisibility}
-            style={styles.eyeButton}
-          >
-            <Ionicons
-              name={showBalance ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color={LIGHT_TEXT}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.balanceAmountContainer}>
-          <TouchableOpacity onPress={handleBalancePress} activeOpacity={0.7}>
-            <Animated.View
-              style={{
-                opacity: balanceOpacity,
-                flexDirection: "row",
-                alignItems: "baseline",
-              }}
+    const handleBalancePress = () => {
+      navigation.navigate("CouponTransaction");
+    };
+
+    return (
+      <View style={[styles.card, styles.balanceCard]}>
+        <View style={styles.balanceContent}>
+          <View style={styles.balanceHeader}>
+            <View style={styles.balanceLabelContainer}>
+              <Ionicons name="wallet-outline" size={16} color={LIGHT_TEXT} />
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleBalanceVisibility}
+              style={styles.eyeButton}
             >
-              <Text style={styles.balanceAmount}>
-                ${showBalance ? parseFloat(balance).toFixed(2) : "•••••"}
-              </Text>
-              <Text style={styles.balanceCurrency}> USD</Text>
-            </Animated.View>
-          </TouchableOpacity>
-        </View>
-        {showBalance && (showIncrease || showDecrease) && (
-          <View
-            style={[
-              styles.balanceChangeContainer,
-              showIncrease ? styles.balanceIncrease : styles.balanceDecrease,
-            ]}
-          >
-            <Ionicons
-              name={showIncrease ? "trending-up" : "trending-down"}
-              size={14}
-              color={WHITE}
-            />
-            <Text style={styles.balanceChangeText}>
-              {showIncrease ? "+" : ""}${Math.abs(balanceChange).toFixed(2)}
-            </Text>
-            <View style={styles.balanceChangeSeparator} />
-            <Text style={styles.balanceChangeLabel}>
-              {showIncrease ? "This week" : "This week"}
-            </Text>
+              <Ionicons
+                name={showBalance ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color={LIGHT_TEXT}
+              />
+            </TouchableOpacity>
           </View>
-        )}
-        <View style={styles.balanceFooter}>
-          <View style={styles.statusIndicator}>
+          <View style={styles.balanceAmountContainer}>
+            <TouchableOpacity onPress={handleBalancePress} activeOpacity={0.7}>
+              <Animated.View
+                style={{
+                  opacity: balanceOpacity,
+                  flexDirection: "row",
+                  alignItems: "baseline",
+                }}
+              >
+                <Text style={styles.balanceAmount}>
+                  ${showBalance ? parseFloat(balance).toFixed(2) : "•••••"}
+                </Text>
+                <Text style={styles.balanceCurrency}> USD</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
+          {showBalance && (showIncrease || showDecrease) && (
             <View
               style={[
-                styles.statusDot,
-                { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
+                styles.balanceChangeContainer,
+                showIncrease ? styles.balanceIncrease : styles.balanceDecrease,
               ]}
-            />
-            <Text style={styles.statusText}>
-              {showIncrease ? "Active" : "Updated"}
-            </Text>
+            >
+              <Ionicons
+                name={showIncrease ? "trending-up" : "trending-down"}
+                size={14}
+                color={WHITE}
+              />
+              <Text style={styles.balanceChangeText}>
+                {showIncrease ? "+" : ""}${Math.abs(balanceChange).toFixed(2)}
+              </Text>
+              <View style={styles.balanceChangeSeparator} />
+              <Text style={styles.balanceChangeLabel}>
+                {showIncrease ? "This week" : "This week"}
+              </Text>
+            </View>
+          )}
+          <View style={styles.balanceFooter}>
+            <View style={styles.statusIndicator}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: showIncrease ? SUCCESS_GREEN : "#4CAF50" },
+                ]}
+              />
+              <Text style={styles.statusText}>
+                {showIncrease ? "Active" : "Updated"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color={PRIMARY_BLUE} />
+              ) : (
+                <Ionicons
+                  name="refresh-outline"
+                  size={20}
+                  color={PRIMARY_BLUE}
+                />
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.refreshButton}
-            onPress={onRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <ActivityIndicator size="small" color={PRIMARY_BLUE} />
-            ) : (
-              <>
-                <Ionicons name="refresh-outline" size={16} color={PRIMARY_BLUE} />
-                <Text style={styles.refreshText}>Refresh</Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
       </View>
-    </View>
-  );
-};
+    );
+  };
 
   const QuickActions = () => (
     <View style={styles.quickActionsWrapper}>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={styles.actionItem}
           activeOpacity={0.8}
           onPress={openSendModal}
         >
-          <View style={[styles.actionCircle, { backgroundColor: PRIMARY_BLUE }]}>
+          <View
+            style={[styles.actionCircle, { backgroundColor: PRIMARY_BLUE }]}
+          >
             <MaterialIcons name="send" size={28} color={WHITE} />
           </View>
           <Text style={styles.actionText}>Send</Text>
@@ -588,7 +573,9 @@ const BalanceCard = () => {
           activeOpacity={0.8}
           onPress={handleReceive}
         >
-          <View style={[styles.actionCircle, { backgroundColor: SUCCESS_GREEN }]}>
+          <View
+            style={[styles.actionCircle, { backgroundColor: SUCCESS_GREEN }]}
+          >
             <MaterialIcons name="call-received" size={28} color={WHITE} />
           </View>
           <Text style={styles.actionText}>Receive</Text>
@@ -664,7 +651,12 @@ const BalanceCard = () => {
             ]}
             onPress={() => handlePlatformSelect("mychangex")}
           >
-            <View style={[styles.platformIconContainer, { backgroundColor: PRIMARY_BLUE }]}>
+            <View
+              style={[
+                styles.platformIconContainer,
+                { backgroundColor: PRIMARY_BLUE },
+              ]}
+            >
               <Image
                 source={mychangexLogo}
                 style={[styles.platformImage, styles.mychangexLogo]}
@@ -738,7 +730,11 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND_COLOR,
   },
   scrollContent: { flexGrow: 1, paddingBottom: 30 },
-  mainContent: { flex: 1, paddingHorizontal: 20, backgroundColor: BACKGROUND_COLOR },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    backgroundColor: BACKGROUND_COLOR,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -753,7 +749,7 @@ const styles = StyleSheet.create({
     color: DARK_TEXT,
     fontSize: 22,
     fontWeight: "700",
-    marginLeft: 10,
+    // No marginLeft needed since there's no icon
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 15 },
   iconButton: { padding: 8, position: "relative" },
@@ -789,11 +785,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileIconGradient: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -831,8 +827,6 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 6,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
     width: 36,
     height: 36,
     justifyContent: "center",
@@ -910,20 +904,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   refreshButton: {
-    flexDirection: "row",
+    padding: 6,
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: LIGHT_BLUE,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#d9e4ff",
-  },
-  refreshText: {
-    color: PRIMARY_BLUE,
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 8,
   },
   quickActionsWrapper: { marginTop: 24, marginBottom: 32 },
   sectionTitle: {

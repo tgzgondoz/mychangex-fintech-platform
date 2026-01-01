@@ -49,7 +49,7 @@ const SpendCard = ({
     },
   ],
   userBalance = 0,
-  buttonText = "Use your $0.30 to pay for bills, airtime, event tickets on Spend MyChangeX"
+  buttonText = " To pay for bills, airtime, event tickets using MyChangeX"
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -149,7 +149,7 @@ const SpendCard = ({
         <View style={styles.spendContent}>
           <View style={styles.spendHeader}>
             <View style={styles.spendTextContainer}>
-              <Text style={styles.spendTitle}>Spend MyChangeX</Text>
+              <Text style={styles.spendTitle}>Spend Your Change </Text>
               <Text style={styles.spendSubtitle}>
                 {buttonText}
               </Text>
