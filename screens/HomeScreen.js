@@ -766,12 +766,10 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: WHITE, fontSize: 10, fontWeight: "bold" },
   card: {
-    backgroundColor: CARD_BG,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+   
   },
   profileContainer: {
     flexDirection: "row",
