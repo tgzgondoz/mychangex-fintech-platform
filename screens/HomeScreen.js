@@ -749,7 +749,6 @@ const styles = StyleSheet.create({
     color: DARK_TEXT,
     fontSize: 22,
     fontWeight: "700",
-    // No marginLeft needed since there's no icon
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 15 },
   iconButton: { padding: 8, position: "relative" },
@@ -766,10 +765,10 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: WHITE, fontSize: 10, fontWeight: "bold" },
   card: {
+    backgroundColor: CARD_BG,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-   
   },
   profileContainer: {
     flexDirection: "row",
@@ -952,8 +951,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     marginVertical: 6,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
   },
   platformIconContainer: {
     width: 52,
@@ -976,12 +973,10 @@ const styles = StyleSheet.create({
   platformDescription: { fontSize: 13, color: LIGHT_TEXT, fontWeight: "400" },
   modalCloseButton: {
     marginTop: 20,
-    backgroundColor: "#f5f5f5",
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
   modalCloseText: { color: LIGHT_TEXT, fontSize: 16, fontWeight: "600" },
 });
-
 export default HomeScreen;

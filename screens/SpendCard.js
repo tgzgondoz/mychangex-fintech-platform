@@ -11,7 +11,6 @@ import {
   ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get('window');
 const PRIMARY_BLUE = "#0136c0";
@@ -24,21 +23,18 @@ const SpendCard = ({
   services = [
     { 
       name: "Bill Payment", 
-      icon: "receipt-outline", 
       available: true, 
       screen: "Utilities",
       description: "Pay electricity, water bills"
     },
     {
       name: "Buy Airtime",
-      icon: "call-outline",
       available: true,
       screen: "Airtime",
       description: "Top up mobile credit"
     },
     { 
       name: "Events Tickets", 
-      icon: "ticket-outline", 
       available: false,
       description: "Purchase event tickets"
     },
@@ -79,9 +75,6 @@ const SpendCard = ({
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Available Services</Text>
-            <TouchableOpacity onPress={closeModal}>
-              <Ionicons name="close" size={22} color={LIGHT_TEXT} />
-            </TouchableOpacity>
           </View>
           
           <Text style={styles.modalSubtitle}>
@@ -99,16 +92,12 @@ const SpendCard = ({
                 onPress={() => handleServiceSelect(service)}
                 activeOpacity={0.7}
               >
-                <View style={styles.serviceIcon}>
-                  <Ionicons name={service.icon} size={20} color={PRIMARY_BLUE} />
-                </View>
                 <View style={styles.serviceInfo}>
                   <Text style={styles.serviceName}>{service.name}</Text>
                   <Text style={styles.serviceDescription}>
                     {service.description}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#ccc" />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -130,7 +119,7 @@ const SpendCard = ({
         <View style={styles.content}>
           <Text style={styles.title}>Spend Your Change</Text>
           <Text style={styles.subtitle}>
-            To pay for bills, airtime, and event tickets
+             To pay for bills, airtime, and event tickets
           </Text>
           <TouchableOpacity
             onPress={openModal}
@@ -213,10 +202,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 10,
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 18,
@@ -233,22 +220,10 @@ const styles = StyleSheet.create({
     maxHeight: height * 0.3,
   },
   serviceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     marginBottom: 10,
-  },
-  serviceIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(1, 54, 192, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
   serviceInfo: {
     flex: 1,
@@ -267,7 +242,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
   },
   cancelText: {
