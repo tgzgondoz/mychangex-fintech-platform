@@ -49,7 +49,7 @@ const UtilitiesScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Utility categories with their services - keep colors but adjust for light theme
+  // Utility categories with their services
   const utilityCategories = [
     {
       id: 'electricity',
@@ -62,8 +62,6 @@ const UtilitiesScreen = () => {
           id: 'zesa',
           name: 'ZESA',
           description: 'Zimbabwe Electricity Supply Authority',
-          icon: 'flash-outline',
-          iconType: 'ionicons',
           billerCode: 'ZESA',
           requiredFields: ['meter_number', 'amount'],
         },
@@ -71,8 +69,6 @@ const UtilitiesScreen = () => {
           id: 'zesa_prepaid',
           name: 'ZESA Prepaid',
           description: 'Buy electricity tokens',
-          icon: 'battery-charging-outline',
-          iconType: 'ionicons',
           billerCode: 'ZESA_PREPAID',
           requiredFields: ['meter_number', 'amount'],
         }
@@ -89,8 +85,6 @@ const UtilitiesScreen = () => {
           id: 'city_council',
           name: 'City Council',
           description: 'Pay rates and municipal bills',
-          icon: 'building',
-          iconType: 'fontawesome5',
           billerCode: 'CITY_COUNCIL',
           requiredFields: ['account_number', 'amount'],
         },
@@ -98,8 +92,6 @@ const UtilitiesScreen = () => {
           id: 'water',
           name: 'Water Bills',
           description: 'ZINWA and local water authorities',
-          icon: 'water',
-          iconType: 'fontawesome5',
           billerCode: 'WATER_BILL',
           requiredFields: ['account_number', 'amount'],
         }
@@ -116,8 +108,6 @@ const UtilitiesScreen = () => {
           id: 'school_fees',
           name: 'School Fees',
           description: 'Pay school and college fees',
-          icon: 'school-outline',
-          iconType: 'ionicons',
           billerCode: 'SCHOOL_FEES',
           requiredFields: ['student_id', 'amount', 'institution'],
         },
@@ -125,8 +115,6 @@ const UtilitiesScreen = () => {
           id: 'university',
           name: 'University Fees',
           description: 'University tuition and accommodation',
-          icon: 'library-outline',
-          iconType: 'ionicons',
           billerCode: 'UNIVERSITY',
           requiredFields: ['student_number', 'amount', 'institution'],
         }
@@ -143,8 +131,6 @@ const UtilitiesScreen = () => {
           id: 'vehicle_insurance',
           name: 'Vehicle Insurance',
           description: 'Car, truck and motorcycle insurance',
-          icon: 'car-outline',
-          iconType: 'ionicons',
           billerCode: 'VEHICLE_INS',
           requiredFields: ['policy_number', 'amount'],
         },
@@ -152,8 +138,6 @@ const UtilitiesScreen = () => {
           id: 'medical_insurance',
           name: 'Medical Insurance',
           description: 'Health and medical cover payments',
-          icon: 'medical-bag',
-          iconType: 'materialicons',
           billerCode: 'MEDICAL_INS',
           requiredFields: ['policy_number', 'amount'],
         },
@@ -161,8 +145,6 @@ const UtilitiesScreen = () => {
           id: 'life_insurance',
           name: 'Life Insurance',
           description: 'Life insurance premium payments',
-          icon: 'heart-outline',
-          iconType: 'ionicons',
           billerCode: 'LIFE_INS',
           requiredFields: ['policy_number', 'amount'],
         }
@@ -179,8 +161,6 @@ const UtilitiesScreen = () => {
           id: 'telone',
           name: 'TelOne',
           description: 'Landline and internet bills',
-          icon: 'phone-outline',
-          iconType: 'ionicons',
           billerCode: 'TELONE',
           requiredFields: ['account_number', 'amount'],
         },
@@ -188,8 +168,6 @@ const UtilitiesScreen = () => {
           id: 'broadband',
           name: 'Broadband',
           description: 'Internet service providers',
-          icon: 'wifi-outline',
-          iconType: 'ionicons',
           billerCode: 'BROADBAND',
           requiredFields: ['account_number', 'amount'],
         }
@@ -206,8 +184,6 @@ const UtilitiesScreen = () => {
           id: 'tv_license',
           name: 'TV License',
           description: 'ZBC television license',
-          icon: 'tv-outline',
-          iconType: 'ionicons',
           billerCode: 'TV_LICENSE',
           requiredFields: ['license_number', 'amount'],
         },
@@ -215,8 +191,6 @@ const UtilitiesScreen = () => {
           id: 'rent',
           name: 'Rent Payment',
           description: 'Monthly rental payments',
-          icon: 'home-outline',
-          iconType: 'ionicons',
           billerCode: 'RENT',
           requiredFields: ['landlord_code', 'amount'],
         }
@@ -444,7 +418,6 @@ const UtilitiesScreen = () => {
             {utilityCategories.map((category) => (
               <View key={category.id} style={styles.categorySection}>
                 <View style={styles.categoryHeader}>
-                  {/* Removed background from category icon */}
                   {renderIcon(category.iconType, category.icon, 24, category.color)}
                   <Text style={styles.categoryTitle}>{category.title}</Text>
                 </View>
@@ -459,8 +432,6 @@ const UtilitiesScreen = () => {
                     >
                       <View style={styles.serviceContent}>
                         <View style={styles.serviceHeader}>
-                          {/* Removed background from service icon */}
-                          {renderIcon(service.iconType, service.icon, 24, category.color)}
                           <View style={styles.serviceInfo}>
                             <Text style={styles.serviceName}>{service.name}</Text>
                             <Text style={styles.serviceDescription}>{service.description}</Text>
@@ -689,7 +660,6 @@ const styles = StyleSheet.create({
   serviceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   serviceInfo: {
     flex: 1,

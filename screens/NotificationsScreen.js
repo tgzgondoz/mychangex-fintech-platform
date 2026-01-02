@@ -226,7 +226,7 @@ const NotificationsScreen = ({
         {
           id: "welcome_1",
           type: "system",
-          title: "Welcome to MyChangeX!",
+          title: "Welcome!",
           message: "Start using the app to see your transaction notifications here.",
           amount: null,
           timestamp: new Date().toISOString(),
@@ -248,15 +248,16 @@ const NotificationsScreen = ({
       const isSent = transaction.sender_id === userId;
       const transactionDate = new Date(transaction.created_at);
 
-      const platform = getTransactionPlatform(transaction, index);
+      // Remove platform references from notifications
+      const platform = null; // Don't show platform
 
       generatedNotifications.push({
         id: `transaction_${transaction.id}`,
         type: isSent ? "sent" : "received",
         title: isSent ? "Money Sent" : "Money Received",
         message: isSent
-          ? `You sent $${amount.toFixed(2)} via ${platform}`
-          : `You received $${amount.toFixed(2)} via ${platform}`,
+          ? `You sent $${amount.toFixed(2)}`
+          : `You received $${amount.toFixed(2)}`,
         amount: amount,
         timestamp: transaction.created_at,
         transactionId: transaction.id,
@@ -296,7 +297,7 @@ const NotificationsScreen = ({
           read: true,
           icon: "wallet",
           color: PRIMARY_BLUE,
-          platform: "MyChangeX",
+          platform: null,
           isPushNotification: false,
         },
         {
@@ -334,14 +335,8 @@ const NotificationsScreen = ({
     return generatedNotifications;
   };
 
-  const getTransactionPlatform = (transaction, index) => {
-    if (transaction.type === "mychangex") return "MyChangeX";
-    if (transaction.type === "ecocash") return "EcoCash";
-    if (transaction.type === "omari") return "Omari";
-
-    const platforms = ["MyChangeX", "EcoCash", "Omari"];
-    return platforms[index % platforms.length];
-  };
+  // Remove the getTransactionPlatform function completely
+  // No need for it since we're hiding platform names
 
   const getFilteredNotifications = () => {
     switch (viewMode) {
@@ -523,7 +518,6 @@ const NotificationsScreen = ({
             "Transaction Details",
             `Amount: $${notification.amount?.toFixed(2) || "N/A"}\n` +
               `Type: ${notification.type}\n` +
-              `Platform: ${notification.platform || "MyChangeX"}\n` +
               `Time: ${formatTimeAgo(notification.timestamp)}`,
             [{ text: "OK" }]
           );
@@ -605,18 +599,8 @@ const NotificationsScreen = ({
     }
   }, []);
 
-  const getPlatformIcon = useCallback((platform) => {
-    switch (platform) {
-      case "MyChangeX":
-        return "🔄";
-      case "EcoCash":
-        return "📱";
-      case "Omari":
-        return "💳";
-      default:
-        return "💰";
-    }
-  }, []);
+  // Remove getPlatformIcon function since we don't show platforms anymore
+  // const getPlatformIcon = useCallback((platform) => { ... });
 
   const unreadCount = displayNotifications.filter(
     (notification) => !notification.read
@@ -674,17 +658,7 @@ const NotificationsScreen = ({
                 {typeBadge.text}
               </Text>
               
-              {notification.platform && (
-                <View style={styles.platformContainer}>
-                  <Text style={styles.platformIcon}>
-                    {getPlatformIcon(notification.platform)}
-                  </Text>
-                  <Text style={styles.platformText} numberOfLines={1}>
-                    {notification.platform}
-                  </Text>
-                </View>
-              )}
-              
+              {/* Remove platform display */}
               <Text style={styles.timeText}>
                 {formatTimeAgo(notification.timestamp)}
               </Text>
@@ -1128,21 +1102,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  platformContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  platformIcon: {
-    fontSize: 10,
-    marginRight: 4,
-  },
-  platformText: {
-    color: LIGHT_TEXT,
-    fontSize: 10,
-    fontWeight: "500",
-  },
+  // Remove platformContainer, platformIcon, and platformText styles
   timeText: {
     color: LIGHT_TEXT,
     fontSize: 10,
