@@ -27,6 +27,17 @@ import {
 } from './supabase';
 
 const { width, height } = Dimensions.get('window');
+const PRIMARY_BLUE = "#0136c0";
+const ACCENT_BLUE = "#0136c0";
+const LIGHT_BLUE = "#f5f8ff";
+const WHITE = "#ffffff";
+const LIGHT_TEXT = "#666666";
+const DARK_TEXT = "#1A1A1A";
+const CARD_BG = "#ffffff";
+const CARD_BORDER = "#eaeaea";
+const SUCCESS_GREEN = "#00C853";
+const ERROR_RED = "#FF5252";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -236,12 +247,12 @@ const LoginScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
-        colors={['#0136c0', '#0136c0']}
+        colors={[BACKGROUND_COLOR, WHITE]}
         style={styles.background}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       >
-        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -279,13 +290,13 @@ const LoginScreen = () => {
                   <MaterialIcons 
                     name="phone" 
                     size={20}
-                    color="rgba(255,255,255,0.8)" 
+                    color={PRIMARY_BLUE} 
                     style={styles.inputIcon} 
                   />
                   <TextInput
                     style={styles.input}
                     placeholder="Phone Number (e.g., 771234567)"
-                    placeholderTextColor="rgba(255,255,255,0.6)"
+                    placeholderTextColor={LIGHT_TEXT}
                     value={phoneNumber}
                     onChangeText={handlePhoneChange}
                     onKeyPress={handleKeyPress}
@@ -303,13 +314,13 @@ const LoginScreen = () => {
                   <FontAwesome
                     name="lock"
                     size={20}
-                    color="rgba(255,255,255,0.8)"
+                    color={PRIMARY_BLUE}
                     style={styles.inputIcon}
                   />
                   <TextInput
                     style={styles.input}
                     placeholder="4-digit PIN"
-                    placeholderTextColor="rgba(255,255,255,0.6)"
+                    placeholderTextColor={LIGHT_TEXT}
                     value={pin}
                     onChangeText={handlePinChange}
                     onKeyPress={handleKeyPress}
@@ -331,7 +342,7 @@ const LoginScreen = () => {
                     <MaterialIcons
                       name={showPin ? "visibility-off" : "visibility"}
                       size={20}
-                      color="rgba(255,255,255,0.8)"
+                      color={LIGHT_TEXT}
                     />
                   </TouchableOpacity>
                 </View>
@@ -342,7 +353,7 @@ const LoginScreen = () => {
                     <MaterialIcons
                       name={pin.length === 4 ? "check-circle" : "info"}
                       size={16}
-                      color={pin.length === 4 ? "#4CAF50" : "rgba(255,255,255,0.6)"}
+                      color={pin.length === 4 ? SUCCESS_GREEN : LIGHT_TEXT}
                     />
                     <Text style={styles.pinIndicatorText}>
                       {pin.length < 4 
@@ -368,20 +379,15 @@ const LoginScreen = () => {
                   activeOpacity={0.9}
                   disabled={loading || !dbConnected}
                 >
-                  <LinearGradient
-                    colors={['#fff', '#f8f9fa']}
-                    style={styles.buttonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
+                  <View style={styles.buttonBackground}>
                     {loading ? (
-                      <ActivityIndicator size="small" color="#0136c0" />
+                      <ActivityIndicator size="small" color={WHITE} />
                     ) : (
                       <Text style={styles.buttonText}>
                         {dbConnected ? 'Login with PIN' : 'Connecting...'}
                       </Text>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 <View style={styles.signupContainer}>
@@ -413,7 +419,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0136c0",
+    backgroundColor: BACKGROUND_COLOR,
   },
   container: {
     flex: 1,
@@ -443,13 +449,13 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#ffffff',
+    color: DARK_TEXT,
     marginBottom: 6,
     textAlign: 'center',
   },
   subText: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    color: LIGHT_TEXT,
     fontWeight: '500',
     textAlign: 'center',
     marginBottom: 16,
@@ -461,13 +467,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dbConnected: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: 'rgba(0, 200, 83, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 200, 83, 0.3)',
   },
   dbDisconnected: {
-    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 82, 82, 0.3)',
   },
   dbStatusText: {
-    color: '#ffffff',
+    color: DARK_TEXT,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -480,13 +490,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: WHITE,
     borderRadius: 10,
     paddingHorizontal: 16,
     marginBottom: 16,
     height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: CARD_BORDER,
   },
   inputIcon: {
     marginRight: 12,
@@ -494,7 +504,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    color: '#ffffff',
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: '500',
     paddingVertical: 0,
@@ -510,7 +520,7 @@ const styles = StyleSheet.create({
   },
   pinIndicatorText: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
+    color: LIGHT_TEXT,
     marginLeft: 6,
     fontWeight: "500",
   },
@@ -519,7 +529,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: 'rgba(255,255,255,0.9)',
+    color: PRIMARY_BLUE,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -531,19 +541,20 @@ const styles = StyleSheet.create({
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   disabledButton: {
     opacity: 0.6,
   },
-  buttonGradient: {
+  buttonBackground: {
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: PRIMARY_BLUE,
   },
   buttonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -554,25 +565,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   signupText: {
-    color: 'rgba(255,255,255,0.9)',
+    color: LIGHT_TEXT,
     fontSize: 14,
     fontWeight: '500',
   },
   signupLink: {
-    color: '#ffffff',
+    color: PRIMARY_BLUE,
     fontWeight: '600',
     fontSize: 14,
     textDecorationLine: 'underline',
   },
   securityInfoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: WHITE,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: CARD_BORDER,
   },
   securityInfoText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: LIGHT_TEXT,
     fontSize: 12,
     textAlign: 'center',
   },

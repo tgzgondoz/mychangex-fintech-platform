@@ -600,6 +600,12 @@ const NotificationsScreen = ({
     (notification) => !notification.read
   ).length;
 
+  const transactionNotificationsCount = displayNotifications.filter(
+    notification => notification.type === "sent" || 
+    notification.type === "received" || 
+    notification.type === "completed"
+  ).length;
+
   const filteredNotifications = getFilteredNotifications();
 
   const NotificationItem = React.memo(({ notification, index }) => {
@@ -673,19 +679,33 @@ const NotificationsScreen = ({
           style={[styles.viewModeButton, viewMode === "all" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("all")}
         >
-          <Text style={[styles.viewModeButtonText, viewMode === "all" && styles.viewModeButtonTextActive]}>
-            All
-          </Text>
+          <View style={styles.tabButtonContent}>
+            <Text style={[styles.viewModeButtonText, viewMode === "all" && styles.viewModeButtonTextActive]}>
+              All
+            </Text>
+            <View style={styles.tabCountBadge}>
+              <Text style={[styles.tabCountText, viewMode === "all" && styles.tabCountTextActive]}>
+                {displayNotifications.length}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[styles.viewModeButton, viewMode === "unread" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("unread")}
         >
-          <View style={styles.unreadButtonContent}>
+          <View style={styles.tabButtonContent}>
             <Text style={[styles.viewModeButtonText, viewMode === "unread" && styles.viewModeButtonTextActive]}>
               Unread
             </Text>
+            {unreadCount > 0 && (
+              <View style={styles.unreadCountBadge}>
+                <Text style={[styles.unreadCountText, viewMode === "unread" && styles.unreadCountTextActive]}>
+                  {unreadCount}
+                </Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
         
@@ -693,9 +713,16 @@ const NotificationsScreen = ({
           style={[styles.viewModeButton, viewMode === "transactions" && styles.viewModeButtonActive]}
           onPress={() => setViewMode("transactions")}
         >
-          <Text style={[styles.viewModeButtonText, viewMode === "transactions" && styles.viewModeButtonTextActive]}>
-            Transactions
-          </Text>
+          <View style={styles.tabButtonContent}>
+            <Text style={[styles.viewModeButtonText, viewMode === "transactions" && styles.viewModeButtonTextActive]}>
+              Transactions
+            </Text>
+            <View style={styles.transactionCountBadge}>
+              <Text style={[styles.transactionCountText, viewMode === "transactions" && styles.transactionCountTextActive]}>
+                {transactionNotificationsCount}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -926,6 +953,11 @@ const styles = StyleSheet.create({
   viewModeButtonActive: {
     backgroundColor: PRIMARY_BLUE,
   },
+  tabButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   viewModeButtonText: {
     color: LIGHT_TEXT,
     fontSize: 13,
@@ -934,12 +966,51 @@ const styles = StyleSheet.create({
   viewModeButtonTextActive: {
     color: WHITE,
   },
-  unreadButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+  tabCountBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+    borderRadius: 8,
   },
-  // Removed statsContainer and statItem styles
+  tabCountText: {
+    color: LIGHT_TEXT,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  tabCountTextActive: {
+    color: WHITE,
+  },
+  unreadCountBadge: {
+    backgroundColor: ERROR_RED,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+    borderRadius: 8,
+  },
+  unreadCountText: {
+    color: WHITE,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  unreadCountTextActive: {
+    color: WHITE,
+  },
+  transactionCountBadge: {
+    backgroundColor: SUCCESS_GREEN,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+    borderRadius: 8,
+  },
+  transactionCountText: {
+    color: WHITE,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  transactionCountTextActive: {
+    color: WHITE,
+  },
   notificationsHeader: {
     marginBottom: 12,
   },
