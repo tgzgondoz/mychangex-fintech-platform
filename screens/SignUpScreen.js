@@ -361,11 +361,14 @@ const SignupScreen = () => {
           >
             <View style={styles.contentContainer}>
               <View style={styles.logoContainer}>
-                <Image
-                  source={require("../assets/logo.png")}
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
+                {/* Logo with blue border background */}
+                <View style={styles.logoBorderContainer}>
+                  <Image
+                    source={require("../assets/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={styles.welcomeText}>Create Account</Text>
                 <Text style={styles.subText}>Join us to get started</Text>
 
@@ -599,12 +602,7 @@ const SignupScreen = () => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Security Info */}
-                <View style={styles.securityInfoContainer}>
-                  <Text style={styles.securityInfoText}>
-                    🔒 Secure PIN authentication
-                  </Text>
-                </View>
+                {/* Removed: Security Info Container */}
               </View>
             </View>
           </ScrollView>
@@ -639,10 +637,19 @@ const styles = StyleSheet.create({
     paddingTop: height * 0.05,
     paddingBottom: height * 0.03,
   },
-  logo: {
-    width: width * 0.25,
-    height: width * 0.25,
+  logoBorderContainer: {
+    width: width * 0.3,
+    height: width * 0.3,
+    borderRadius: width * 0.15, // Makes it perfectly circular
+    backgroundColor: PRIMARY_BLUE,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
+    padding: 8, // Adds some padding inside the blue circle
+  },
+  logo: {
+    width: width * 0.2,
+    height: width * 0.2,
   },
   welcomeText: {
     fontSize: 24,
@@ -769,6 +776,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: PRIMARY_BLUE,
+    borderRadius: 10,
   },
   buttonText: {
     color: WHITE,
@@ -792,18 +800,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: "underline",
   },
-  securityInfoContainer: {
-    backgroundColor: WHITE,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  securityInfoText: {
-    color: LIGHT_TEXT,
-    fontSize: 12,
-    textAlign: "center",
-  },
+  // Removed: securityInfoContainer and securityInfoText styles
 });
 
 export default SignupScreen;

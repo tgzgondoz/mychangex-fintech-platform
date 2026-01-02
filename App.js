@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Image, StyleSheet } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { 
   isAuthenticated, 
@@ -11,6 +11,13 @@ import {
 import { NotificationService } from './screens/services/notificationService';
 
 const Stack = createNativeStackNavigator();
+
+// Add color constants
+const PRIMARY_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const DARK_TEXT = "#1A1A1A";
+const LIGHT_TEXT = "#666666";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -178,26 +185,29 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        backgroundColor: '#0136c0' 
-      }}>
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={{ 
-          color: '#ffffff', 
-          marginTop: 16, 
-          fontSize: 16,
-          fontWeight: '500',
-          textAlign: 'center'
-        }}>
-          Loading ChangeX...{'\n'}
-          <Text style={{ fontSize: 12, opacity: 0.8 }}>
-            {dbStatus === 'checking' && '🔌 Checking database...'}
-            {dbStatus === 'connected' && '✅ Database connected'}
-            {dbStatus === 'disconnected' && '❌ Database offline'}
-          </Text>
+      <View style={styles.loadingContainer}>
+        {/* Logo with blue border background */}
+        <View style={styles.logoBorderContainer}>
+          <Image 
+            source={require('./assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        
+        <Text style={styles.loadingTitle}>MyChangeX</Text>
+        
+        <ActivityIndicator size="large" color={PRIMARY_BLUE} style={styles.spinner} />
+        
+        <Text style={styles.loadingText}>
+          Loading...
+        </Text>
+        
+        <Text style={styles.statusText}>
+          {dbStatus === 'checking' && '🔌 Checking database...'}
+          {dbStatus === 'connected' && '✅ Database connected'}
+          {dbStatus === 'disconnected' && '❌ Database offline'}
+          {dbStatus === 'error' && '⚠️ Connection error'}
         </Text>
       </View>
     );
@@ -314,6 +324,55 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+// Styles for the loading screen
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: BACKGROUND_COLOR,
+    paddingHorizontal: 20,
+  },
+  logoBorderContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60, // Makes it perfectly circular
+    backgroundColor: PRIMARY_BLUE,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    padding: 16, // Adds some padding inside the blue circle
+  },
+  logo: {
+    width: 80,
+    height: 80,
+  },
+  loadingTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: DARK_TEXT,
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  spinner: {
+    marginBottom: 20,
+  },
+  loadingText: {
+    color: LIGHT_TEXT, 
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 14, 
+    color: LIGHT_TEXT,
+    textAlign: 'center',
+    opacity: 0.8,
+    marginTop: 10,
+  },
+});
 
 // Add these imports at the top with your other imports
 import HomeScreen from './screens/HomeScreen';
