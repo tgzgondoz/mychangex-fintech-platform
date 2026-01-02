@@ -335,9 +335,6 @@ const NotificationsScreen = ({
     return generatedNotifications;
   };
 
-  // Remove the getTransactionPlatform function completely
-  // No need for it since we're hiding platform names
-
   const getFilteredNotifications = () => {
     switch (viewMode) {
       case "unread":
@@ -599,9 +596,6 @@ const NotificationsScreen = ({
     }
   }, []);
 
-  // Remove getPlatformIcon function since we don't show platforms anymore
-  // const getPlatformIcon = useCallback((platform) => { ... });
-
   const unreadCount = displayNotifications.filter(
     (notification) => !notification.read
   ).length;
@@ -658,7 +652,6 @@ const NotificationsScreen = ({
                 {typeBadge.text}
               </Text>
               
-              {/* Remove platform display */}
               <Text style={styles.timeText}>
                 {formatTimeAgo(notification.timestamp)}
               </Text>
@@ -681,7 +674,7 @@ const NotificationsScreen = ({
           onPress={() => setViewMode("all")}
         >
           <Text style={[styles.viewModeButtonText, viewMode === "all" && styles.viewModeButtonTextActive]}>
-            All ({displayNotifications.length})
+            All
           </Text>
         </TouchableOpacity>
         
@@ -693,11 +686,6 @@ const NotificationsScreen = ({
             <Text style={[styles.viewModeButtonText, viewMode === "unread" && styles.viewModeButtonTextActive]}>
               Unread
             </Text>
-            {unreadCount > 0 && (
-              <View style={styles.unreadCountBadge}>
-                <Text style={styles.unreadCountText}>{unreadCount}</Text>
-              </View>
-            )}
           </View>
         </TouchableOpacity>
         
@@ -751,13 +739,7 @@ const NotificationsScreen = ({
           </TouchableOpacity>
           
           <View style={styles.headerCenter}>
-            <Ionicons name="notifications" size={22} color={PRIMARY_BLUE} style={styles.headerIcon} />
             <Text style={styles.headerTitle}>Notifications</Text>
-            {unreadCount > 0 && (
-              <View style={styles.headerUnreadBadge}>
-                <Text style={styles.headerUnreadText}>{unreadCount}</Text>
-              </View>
-            )}
           </View>
           
           <View style={styles.headerActions}>
@@ -800,24 +782,6 @@ const NotificationsScreen = ({
         >
           {/* View Mode Tabs */}
           <ViewModeTabs />
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{displayNotifications.length}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{unreadCount}</Text>
-              <Text style={styles.statLabel}>Unread</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {displayNotifications.filter(n => n.type === "received" || n.type === "sent").length}
-              </Text>
-              <Text style={styles.statLabel}>Transactions</Text>
-            </View>
-          </View>
 
           {/* Notifications Header */}
           {filteredNotifications.length > 0 && (
@@ -914,27 +878,11 @@ const styles = StyleSheet.create({
   headerCenter: {
     flexDirection: "row",
     alignItems: "center",
-    position: "relative",
-  },
-  headerIcon: {
-    marginRight: 8,
   },
   headerTitle: {
     color: DARK_TEXT,
     fontSize: 18,
     fontWeight: "600",
-  },
-  headerUnreadBadge: {
-    backgroundColor: ERROR_RED,
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  headerUnreadText: {
-    color: WHITE,
-    fontSize: 11,
-    fontWeight: "bold",
   },
   headerActions: {
     flexDirection: "row",
@@ -991,41 +939,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  unreadCountBadge: {
-    backgroundColor: ERROR_RED,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 6,
-    borderRadius: 8,
-  },
-  unreadCountText: {
-    color: WHITE,
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: CARD_BORDER,
-  },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statNumber: {
-    color: DARK_TEXT,
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  statLabel: {
-    color: LIGHT_TEXT,
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  // Removed statsContainer and statItem styles
   notificationsHeader: {
     marginBottom: 12,
   },
@@ -1102,7 +1016,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  // Remove platformContainer, platformIcon, and platformText styles
   timeText: {
     color: LIGHT_TEXT,
     fontSize: 10,
