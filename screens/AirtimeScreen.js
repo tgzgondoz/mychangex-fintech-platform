@@ -38,6 +38,11 @@ const SUCCESS_GREEN = "#00C853";
 const ERROR_RED = "#FF5252";
 const BACKGROUND_COLOR = "#f8f9fa";
 
+// Network colors
+const ECONET_COLOR = "#0077FF"; // Light blue
+const NETONE_COLOR = "#FF9800"; // Light orange
+const TELECEL_COLOR = "#FF5252"; // Light red
+
 // Import your image assets
 const econetLogo = require("../assets/econet-wireless-logo.png");
 const netoneLogo = require("../assets/netone.png");
@@ -58,12 +63,12 @@ const AirtimeScreen = () => {
   const [userPhoneNumber, setUserPhoneNumber] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  // Network providers data
+  // Network providers data with updated colors
   const networks = [
     {
       id: "econet",
       name: "Econet",
-      color: "#FF6B35",
+      color: ECONET_COLOR,
       icon: econetLogo,
       description: "Econet Wireless Zimbabwe",
       prefix: "077, 078",
@@ -72,7 +77,7 @@ const AirtimeScreen = () => {
     {
       id: "netone",
       name: "NetOne",
-      color: "#4CAF50",
+      color: NETONE_COLOR,
       icon: netoneLogo,
       description: "NetOne Cellular",
       prefix: "071",
@@ -81,7 +86,7 @@ const AirtimeScreen = () => {
     {
       id: "telecel",
       name: "Telecel",
-      color: "#2196F3",
+      color: TELECEL_COLOR,
       icon: telecelLogo,
       description: "Telecel Zimbabwe",
       prefix: "073",
@@ -316,7 +321,7 @@ const AirtimeScreen = () => {
     <View style={styles.background}>
       <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
       <SafeAreaView style={styles.safeArea}>
-        {/* Header - Match HomeScreen */}
+        {/* Header - Simplified without icon */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -326,13 +331,11 @@ const AirtimeScreen = () => {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Ionicons name="phone-portrait-outline" size={22} color={PRIMARY_BLUE} />
             <Text style={styles.headerTitle}>Buy Airtime</Text>
           </View>
 
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
-          </View>
+          {/* Empty view to balance the header */}
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView
@@ -350,23 +353,7 @@ const AirtimeScreen = () => {
             />
           }
         >
-          {/* Welcome Section - Match HomeScreen cards */}
-          <View style={[styles.card, styles.welcomeCard]}>
-            <LinearGradient
-              colors={[LIGHT_BLUE, "#e8f0ff"]}
-              style={styles.welcomeGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="flash" size={40} color={PRIMARY_BLUE} style={styles.welcomeIcon} />
-              <Text style={styles.welcomeTitle}>Buy Airtime</Text>
-              <Text style={styles.welcomeSubtitle}>
-                Instant airtime top-up for all networks in Zimbabwe
-              </Text>
-            </LinearGradient>
-          </View>
-
-          {/* Network Selection */}
+          {/* Network Selection - Directly starts without banner */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Select Network</Text>
@@ -391,7 +378,7 @@ const AirtimeScreen = () => {
                     <View style={styles.networkHeader}>
                       <View style={[
                         styles.networkIconContainer,
-                        { backgroundColor: network.color + '15' }
+                        { backgroundColor: `${network.color}15` }
                       ]}>
                         <Image
                           source={network.icon}
@@ -680,8 +667,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    // Removed the background color
   },
   headerCenter: {
     flexDirection: "row",
@@ -691,23 +677,9 @@ const styles = StyleSheet.create({
     color: DARK_TEXT,
     fontSize: 20,
     fontWeight: "700",
-    marginLeft: 10,
   },
   headerSpacer: {
     width: 40,
-  },
-  balanceContainer: {
-    backgroundColor: LIGHT_BLUE,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
-  },
-  balanceText: {
-    color: PRIMARY_BLUE,
-    fontSize: 14,
-    fontWeight: "600",
   },
   card: {
     backgroundColor: CARD_BG,
@@ -715,31 +687,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CARD_BORDER,
     marginBottom: 16,
-  },
-  welcomeCard: {
-    padding: 0,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  welcomeGradient: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  welcomeIcon: {
-    marginBottom: 12,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: DARK_TEXT,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: LIGHT_TEXT,
-    textAlign: "center",
-    lineHeight: 20,
   },
   section: {
     marginBottom: 24,

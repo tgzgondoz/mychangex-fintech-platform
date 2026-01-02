@@ -56,8 +56,7 @@ const UtilitiesScreen = () => {
       title: 'Electricity',
       icon: 'bolt',
       iconType: 'ionicons',
-      color: '#FFA726',
-      gradient: ['#FFA726', '#FFB74D'],
+      color: '#0077FF', // Light blue
       services: [
         {
           id: 'zesa',
@@ -84,8 +83,7 @@ const UtilitiesScreen = () => {
       title: 'Municipal Services',
       icon: 'city',
       iconType: 'fontawesome5',
-      color: '#4CAF50',
-      gradient: ['#4CAF50', '#66BB6A'],
+      color: '#FF9800', // Light orange
       services: [
         {
           id: 'city_council',
@@ -112,8 +110,7 @@ const UtilitiesScreen = () => {
       title: 'Education',
       icon: 'graduation-cap',
       iconType: 'fontawesome5',
-      color: '#2196F3',
-      gradient: ['#2196F3', '#42A5F5'],
+      color: '#FF5252', // Light red
       services: [
         {
           id: 'school_fees',
@@ -140,8 +137,7 @@ const UtilitiesScreen = () => {
       title: 'Insurance',
       icon: 'shield-checkmark-outline',
       iconType: 'ionicons',
-      color: '#9C27B0',
-      gradient: ['#9C27B0', '#BA68C8'],
+      color: '#4CAF50', // Light green
       services: [
         {
           id: 'vehicle_insurance',
@@ -177,8 +173,7 @@ const UtilitiesScreen = () => {
       title: 'Telecommunications',
       icon: 'phone-in-talk',
       iconType: 'materialicons',
-      color: '#FF5722',
-      gradient: ['#FF5722', '#FF7043'],
+      color: '#9C27B0', // Purple
       services: [
         {
           id: 'telone',
@@ -205,8 +200,7 @@ const UtilitiesScreen = () => {
       title: 'Other Bills',
       icon: 'receipt-outline',
       iconType: 'ionicons',
-      color: '#607D8B',
-      gradient: ['#607D8B', '#78909C'],
+      color: '#607D8B', // Blue grey
       services: [
         {
           id: 'tv_license',
@@ -406,7 +400,7 @@ const UtilitiesScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
       <SafeAreaView style={styles.safeArea}>
         
-        {/* Header - Match HomeScreen */}
+        {/* Header - Clean version without icon */}
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
@@ -416,13 +410,11 @@ const UtilitiesScreen = () => {
           </TouchableOpacity>
           
           <View style={styles.headerCenter}>
-            <Ionicons name="receipt-outline" size={22} color={PRIMARY_BLUE} />
             <Text style={styles.headerTitle}>Bill Payments</Text>
           </View>
           
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceText}>${balance.toFixed(2)}</Text>
-          </View>
+          {/* Empty view to balance the header */}
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView
@@ -440,64 +432,55 @@ const UtilitiesScreen = () => {
             />
           }
         >
-          {/* Welcome Section - Match HomeScreen cards */}
-          <View style={[styles.card, styles.welcomeCard]}>
-            <LinearGradient
-              colors={[LIGHT_BLUE, "#e8f0ff"]}
-              style={styles.welcomeGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="checkmark-circle" size={40} color={PRIMARY_BLUE} style={styles.welcomeIcon} />
-              <Text style={styles.welcomeTitle}>Pay Your Bills Securely</Text>
-              <Text style={styles.welcomeSubtitle}>
-                Quick and secure bill payments for all your utilities and services
-              </Text>
-            </LinearGradient>
-          </View>
-
           {/* Utility Categories */}
-          {utilityCategories.map((category) => (
-            <View key={category.id} style={styles.categorySection}>
-              <View style={styles.categoryHeader}>
-                <View style={[styles.categoryIconContainer, { backgroundColor: category.color + '15' }]}>
-                  {renderIcon(category.iconType, category.icon, 20, category.color)}
-                </View>
-                <Text style={styles.categoryTitle}>{category.title}</Text>
-              </View>
-              
-              <View style={styles.servicesGrid}>
-                {category.services.map((service) => (
-                  <TouchableOpacity
-                    key={service.id}
-                    style={styles.serviceCard}
-                    onPress={() => handleUtilitySelect(service)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.serviceContent}>
-                      <View style={styles.serviceHeader}>
-                        <View style={[styles.serviceIconContainer, { backgroundColor: category.color + '15' }]}>
-                          {renderIcon(service.iconType, service.icon, 20, category.color)}
-                        </View>
-                        <View style={styles.serviceInfo}>
-                          <Text style={styles.serviceName}>{service.name}</Text>
-                          <Text style={styles.serviceDescription}>{service.description}</Text>
-                        </View>
-                        <Ionicons 
-                          name="chevron-forward" 
-                          size={20} 
-                          color={LIGHT_TEXT}
-                        />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Select Bill Category</Text>
+              <Text style={styles.sectionSubtitle}>
+                Choose a category to pay your bills
+              </Text>
             </View>
-          ))}
+            
+            {utilityCategories.map((category) => (
+              <View key={category.id} style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  {/* Removed background from category icon */}
+                  {renderIcon(category.iconType, category.icon, 24, category.color)}
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
+                </View>
+                
+                <View style={styles.servicesGrid}>
+                  {category.services.map((service) => (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={[styles.card, styles.serviceCard]}
+                      onPress={() => handleUtilitySelect(service)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.serviceContent}>
+                        <View style={styles.serviceHeader}>
+                          {/* Removed background from service icon */}
+                          {renderIcon(service.iconType, service.icon, 24, category.color)}
+                          <View style={styles.serviceInfo}>
+                            <Text style={styles.serviceName}>{service.name}</Text>
+                            <Text style={styles.serviceDescription}>{service.description}</Text>
+                          </View>
+                          <Ionicons 
+                            name="chevron-forward" 
+                            size={20} 
+                            color={LIGHT_TEXT}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
         </ScrollView>
 
-        {/* Payment Modal - Match HomeScreen modal */}
+        {/* Payment Modal */}
         <Modal
           visible={isPaymentModalVisible}
           transparent={true}
@@ -514,12 +497,11 @@ const UtilitiesScreen = () => {
                 <>
                   <View style={styles.modalHeader}>
                     <View style={styles.modalTitleContainer}>
-                      {renderIcon(selectedUtility.iconType, selectedUtility.icon, 24, PRIMARY_BLUE)}
                       <Text style={styles.modalTitle}>Pay {selectedUtility.name}</Text>
                     </View>
                     {!processingPayment && (
                       <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}>
-                        <Ionicons name="close" size={24} color="#666" />
+                        <Ionicons name="close" size={24} color={LIGHT_TEXT} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -560,7 +542,7 @@ const UtilitiesScreen = () => {
 
                     <View style={styles.balanceInfo}>
                       <View style={styles.balanceInfoRow}>
-                        <Ionicons name="wallet-outline" size={16} color="#666" />
+                        <Ionicons name="wallet-outline" size={16} color={LIGHT_TEXT} />
                         <Text style={styles.balanceLabel}>Available Balance:</Text>
                       </View>
                       <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
@@ -644,8 +626,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
   },
   headerCenter: {
     flexDirection: 'row',
@@ -655,55 +635,25 @@ const styles = StyleSheet.create({
     color: DARK_TEXT,
     fontSize: 20,
     fontWeight: '700',
-    marginLeft: 10,
   },
   headerSpacer: {
     width: 40,
   },
-  balanceContainer: {
-    backgroundColor: LIGHT_BLUE,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
-  },
-  balanceText: {
-    color: PRIMARY_BLUE,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    padding: 0,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    overflow: 'hidden',
-  },
-  welcomeCard: {
+  section: {
     marginBottom: 24,
   },
-  welcomeGradient: {
-    padding: 24,
-    alignItems: 'center',
+  sectionHeader: {
+    marginBottom: 16,
   },
-  welcomeIcon: {
-    marginBottom: 12,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: DARK_TEXT,
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 4,
   },
-  welcomeSubtitle: {
+  sectionSubtitle: {
     fontSize: 14,
     color: LIGHT_TEXT,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   categorySection: {
     marginBottom: 24,
@@ -712,14 +662,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  categoryIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    gap: 12,
   },
   categoryTitle: {
     fontSize: 18,
@@ -729,11 +672,16 @@ const styles = StyleSheet.create({
   servicesGrid: {
     gap: 12,
   },
-  serviceCard: {
+  card: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
+    marginBottom: 16,
+  },
+  serviceCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
   serviceContent: {
     padding: 16,
@@ -741,14 +689,7 @@ const styles = StyleSheet.create({
   serviceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  serviceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    gap: 12,
   },
   serviceInfo: {
     flex: 1,
