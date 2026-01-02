@@ -1105,9 +1105,7 @@ const MyChangeXScreen = () => {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Enter Recipient Phone</Text>
-                <TouchableOpacity onPress={() => setShowPhoneFormModal(false)}>
-                  <Ionicons name="close" size={24} color={DARK_TEXT} />
-                </TouchableOpacity>
+                {/* REMOVED X button from header */}
               </View>
               
               <Text style={styles.inputLabel}>Phone Number</Text>
@@ -1536,7 +1534,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: 'transparent', // REMOVED background color
     borderWidth: 1,
     borderColor: CARD_BORDER,
   },
