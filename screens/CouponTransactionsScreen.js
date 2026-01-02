@@ -11,7 +11,7 @@ import {
   StatusBar,
   RefreshControl,
   Alert,
-  Image,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase, getUserSession } from './supabase';
@@ -37,6 +37,8 @@ const CouponTransactionsScreen = () => {
   const [userId, setUserId] = useState(null);
   const [couponTransactions, setCouponTransactions] = useState([]);
   const [userBalance, setUserBalance] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   useEffect(() => {
     loadUserData();
@@ -238,24 +240,8 @@ const CouponTransactionsScreen = () => {
   };
 
   const handleViewTransactionHistory = (transaction) => {
-    Alert.alert(
-      'Transaction Details',
-      `Amount: $${transaction.amount}\n` +
-      `Status: ${transaction.isReceived ? 'Received' : 'Sent'}\n` +
-      `From: ${transaction.senderName}\n` +
-      `To: ${transaction.receiverName}\n` +
-      `Date: ${transaction.formattedDate}\n` +
-      `Time: ${transaction.formattedTime}\n` +
-      `Type: ${transaction.type}`,
-      [
-        { text: 'Close', style: 'default' },
-        transaction.isReceived && {
-          text: 'Send Back',
-          style: 'default',
-          onPress: () => handleSendBack(transaction)
-        }
-      ].filter(Boolean)
-    );
+    setSelectedTransaction(transaction);
+    setModalVisible(true);
   };
 
   const formatPhoneNumber = (phone) => {
@@ -448,6 +434,101 @@ const CouponTransactionsScreen = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Transaction Details Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {selectedTransaction && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Transaction Details</Text>
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Ionicons name="close" size={24} color={LIGHT_TEXT} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.modalContent}>
+                  <View style={styles.modalAmountContainer}>
+                    <Text style={[
+                      styles.modalAmount,
+                      selectedTransaction.isReceived ? styles.modalReceivedAmount : styles.modalSentAmount
+                    ]}>
+                      {selectedTransaction.isReceived ? '+' : '-'}${selectedTransaction.amount}
+                    </Text>
+                    <Text style={styles.modalAmountLabel}>
+                      {selectedTransaction.isReceived ? 'Received' : 'Sent'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.modalDivider} />
+                  
+                  <View style={styles.modalDetails}>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>From:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.senderName}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Sender Phone:</Text>
+                      <Text style={styles.modalDetailValue}>{formatPhoneNumber(selectedTransaction.senderPhone)}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>To:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.receiverName}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Receiver Phone:</Text>
+                      <Text style={styles.modalDetailValue}>{formatPhoneNumber(selectedTransaction.receiverPhone)}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Date:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.formattedDate}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Time:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.formattedTime}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Type:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.type}</Text>
+                    </View>
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Transaction ID:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedTransaction.id}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.modalButtonContainer}>
+                    {selectedTransaction.isReceived && (
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.sendBackModalButton]}
+                        onPress={() => {
+                          setModalVisible(false);
+                          handleSendBack(selectedTransaction);
+                        }}
+                      >
+                        <Ionicons name="arrow-redo-outline" size={18} color={WHITE} />
+                        <Text style={styles.sendBackModalButtonText}>Send Back</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.closeModalButton]}
+                      onPress={() => setModalVisible(false)}
+                    >
+                      <Text style={styles.closeModalButtonText}>Close</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -564,8 +645,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
   },
   transactionCountText: {
     color: PRIMARY_BLUE,
@@ -704,8 +783,6 @@ const styles = StyleSheet.create({
     backgroundColor: LIGHT_BLUE,
     padding: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
     gap: 8,
   },
   actionButtonText: {
@@ -715,7 +792,6 @@ const styles = StyleSheet.create({
   },
   sendBackButton: {
     backgroundColor: SUCCESS_GREEN,
-    borderColor: 'rgba(0, 200, 83, 0.3)',
   },
   sendBackButtonText: {
     color: WHITE,
@@ -761,6 +837,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
     lineHeight: 20,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: WHITE,
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: CARD_BORDER,
+  },
+  modalTitle: {
+    color: DARK_TEXT,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalAmountContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalReceivedAmount: {
+    color: SUCCESS_GREEN,
+  },
+  modalSentAmount: {
+    color: ERROR_RED,
+  },
+  modalAmountLabel: {
+    color: LIGHT_TEXT,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: CARD_BORDER,
+    marginVertical: 20,
+  },
+  modalDetails: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  modalDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  modalDetailLabel: {
+    color: LIGHT_TEXT,
+    fontSize: 14,
+    fontWeight: '500',
+    width: '35%',
+  },
+  modalDetailValue: {
+    color: DARK_TEXT,
+    fontSize: 14,
+    fontWeight: '400',
+    flex: 1,
+    textAlign: 'right',
+  },
+  modalButtonContainer: {
+    gap: 12,
+  },
+  modalButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBackModalButton: {
+    backgroundColor: SUCCESS_GREEN,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sendBackModalButtonText: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  closeModalButton: {
+    backgroundColor: LIGHT_BLUE,
+  },
+  closeModalButtonText: {
+    color: PRIMARY_BLUE,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

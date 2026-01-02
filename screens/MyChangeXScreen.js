@@ -905,9 +905,9 @@ const MyChangeXScreen = () => {
               </TouchableOpacity>
             )}
 
-            {/* Amount Card */}
+            {/* Amount Card - REMOVED card background */}
             <Text style={styles.sectionTitle}>Amount</Text>
-            <View style={[styles.card, styles.amountCard]}>
+            <View style={styles.amountCard}>
               <View style={styles.amountHeader}>
                 <Ionicons name="cash-outline" size={20} color={PRIMARY_BLUE} />
                 <Text style={styles.amountLabel}>
@@ -1267,8 +1267,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   
   // Section Title
@@ -1311,8 +1309,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
   },
   changeRecipientText: {
     color: PRIMARY_BLUE,
@@ -1347,8 +1343,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  // Amount Card
-  amountCard: {},
+  // Amount Card - REMOVED card background, ADDED outline to input
+  amountCard: {
+    marginBottom: 16,
+  },
   amountHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1363,11 +1361,11 @@ const styles = StyleSheet.create({
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: 'transparent',
     borderRadius: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    marginBottom: 16,
   },
   amountInputContainerError: {
     borderColor: ERROR_RED,
@@ -1376,15 +1374,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     paddingLeft: 16,
     paddingRight: 8,
-    color: DARK_TEXT,
+    color: LIGHT_TEXT,
     fontWeight: '600',
   },
   amountInput: {
     flex: 1,
     padding: 16,
     fontSize: 24,
-    color: DARK_TEXT,
+    color: LIGHT_TEXT,
     fontWeight: '600',
+    backgroundColor: 'transparent',
   },
   amountInputError: {
     color: ERROR_RED,
@@ -1395,8 +1394,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     gap: 8,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   balanceStatus: {
     fontSize: 14,
@@ -1412,8 +1409,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     backgroundColor: 'rgba(255, 167, 38, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.2)',
   },
   suggestionText: {
     color: '#FFA726',
@@ -1461,8 +1456,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: LIGHT_BLUE,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   switchModeButtonText: {
     color: PRIMARY_BLUE,
@@ -1475,7 +1468,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
   
-  // Modals - Matches HomeScreen modal styles
+  // Modals
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1498,7 +1491,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 22, fontWeight: '700', color: DARK_TEXT },
   
-  // Platform/Recipient Item - Matches HomeScreen platform item
+  // Platform/Recipient Item - REMOVED icon background
   platformItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1506,8 +1499,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     marginVertical: 6,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   platformIconContainer: {
     width: 52,
@@ -1516,7 +1507,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    backgroundColor: LIGHT_BLUE,
   },
   platformInfo: { flex: 1 },
   platformName: {
@@ -1528,7 +1518,6 @@ const styles = StyleSheet.create({
   platformDescription: { fontSize: 13, color: LIGHT_TEXT, fontWeight: '400' },
   modalCloseButton: {
     marginTop: 20,
-    backgroundColor: '#f5f5f5',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1544,8 +1533,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -1564,12 +1551,9 @@ const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   modalButtonConfirm: {
     flex: 1,
@@ -1653,7 +1637,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Message Modal - Matches HomeScreen style
+  // Message Modal
   messageModalContent: {
     backgroundColor: WHITE,
     borderRadius: 20,
@@ -1661,8 +1645,6 @@ const styles = StyleSheet.create({
     margin: 20,
     maxWidth: 400,
     alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   messageModalHeader: {
     flexDirection: 'row',
@@ -1690,12 +1672,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   messageModalButton: {
-    backgroundColor: LIGHT_BLUE,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   messageModalButtonText: {
     color: PRIMARY_BLUE,
