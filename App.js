@@ -195,19 +195,10 @@ export default function App() {
           />
         </View>
         
-        <Text style={styles.loadingTitle}>MyChangeX</Text>
-        
         <ActivityIndicator size="large" color={PRIMARY_BLUE} style={styles.spinner} />
         
         <Text style={styles.loadingText}>
           Loading...
-        </Text>
-        
-        <Text style={styles.statusText}>
-          {dbStatus === 'checking' && '🔌 Checking database...'}
-          {dbStatus === 'connected' && '✅ Database connected'}
-          {dbStatus === 'disconnected' && '❌ Database offline'}
-          {dbStatus === 'error' && '⚠️ Connection error'}
         </Text>
       </View>
     );
@@ -341,19 +332,12 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_BLUE,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 30,
     padding: 16, // Adds some padding inside the blue circle
   },
   logo: {
     width: 80,
     height: 80,
-  },
-  loadingTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: DARK_TEXT,
-    marginBottom: 30,
-    textAlign: 'center',
   },
   spinner: {
     marginBottom: 20,
@@ -363,14 +347,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  statusText: {
-    fontSize: 14, 
-    color: LIGHT_TEXT,
-    textAlign: 'center',
-    opacity: 0.8,
-    marginTop: 10,
   },
 });
 

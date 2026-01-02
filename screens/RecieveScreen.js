@@ -659,9 +659,20 @@ const ReceiveScreen = () => {
                         backgroundColor={WHITE}
                         logo={LOGO}
                         logoSize={40}
-                        logoBackgroundColor="transparent"
-                        logoBorderRadius={8}
+                        logoBackgroundColor={PRIMARY_BLUE}
+                        logoBorderRadius={20}
+                        logoMargin={2}
                       />
+                      {/* Logo overlay at center of QR code */}
+                      <View style={styles.qrLogoOverlay}>
+                        <View style={styles.qrLogoContainer}>
+                          <Image 
+                            source={LOGO}
+                            style={styles.qrLogo}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      </View>
                     </View>
                     <Text style={styles.qrHint}>Hold this code to the scanner</Text>
                   </>
@@ -899,14 +910,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   qrCodeWrapper: {
-    padding: 24,
+    position: 'relative',
+    padding: 20,
     backgroundColor: WHITE,
     borderRadius: 16,
-    marginBottom: 24,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 24,
+  },
+  qrLogoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrLogoContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor:PRIMARY_BLUE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: PRIMARY_BLUE,
+  },
+  qrLogo: {
+    width: 30,
+    height: 30,
   },
   qrHint: {
     fontSize: 14,

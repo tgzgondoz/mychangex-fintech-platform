@@ -12,7 +12,8 @@ import {
   SafeAreaView,
   Platform,
   KeyboardAvoidingView,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +21,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
+const PRIMARY_BLUE = "#0136c0";
+const WHITE = "#ffffff";
+const DARK_TEXT = "#1A1A1A";
+const LIGHT_TEXT = "#666666";
+const CARD_BORDER = "#eaeaea";
+const BACKGROUND_COLOR = "#f8f9fa";
 
 const EconetScreen = () => {
   const navigation = useNavigation();
@@ -44,14 +51,14 @@ const EconetScreen = () => {
   };
 
   return (
-    <LinearGradient
-      colors={['#0136c0', '#0136c0']}
-      style={styles.background}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={[BACKGROUND_COLOR, WHITE]}
+        style={styles.background}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      >
+        <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -60,63 +67,73 @@ const EconetScreen = () => {
           <ScrollView 
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             <View style={styles.contentContainer}>
+              {/* Logo with blue border background */}
+              <View style={styles.logoBorderContainer}>
+                <Image 
+                  source={require('../assets/ecocash.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              
               <Text style={styles.header}>Ecocash Payment</Text>
               
               {/* Tab Selector */}
-                      <View style={styles.tabContainer}>
-                      <TouchableOpacity 
-                        style={[styles.tabButton, activeTab === 'qr' && styles.activeTab]}
-                        onPress={() => setActiveTab('qr')}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.tabText, activeTab === 'qr' && styles.activeTabText]}>QR Code</Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.tabButton, activeTab === 'number' && styles.activeTab]}
-                        onPress={() => setActiveTab('number')}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.tabText, activeTab === 'number' && styles.activeTabText]}>Phone Number</Text>
-                      </TouchableOpacity>
-                      </View>
-                      
-                      {/* QR Code Section */}
-                      {activeTab === 'qr' && (
-                      <View style={styles.qrContainer}>
-                        <Text style={styles.sectionTitle}>Scan QR Code to Pay</Text>
-                        <View style={styles.qrCodeWrapper}>
-                        <QRCode
-                          value="ecocash:payment?amount=0&reference=MyChangeX"
-                          size={width * 0.6}
-                          color="#0136c0"
-                          backgroundColor="#ffffff"
-                          logo={require('../assets/ecocash.png')}
-                          logoSize={60}
-                          logoBackgroundColor="transparent"
-                        />
-                        </View>
-                        <Text style={styles.qrHint}>Show this at any Ecocash merchant</Text>
-                      </View>
-                      )}
-                      
-                      {/* Phone Number Section */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity 
+                  style={[styles.tabButton, activeTab === 'qr' && styles.activeTab]}
+                  onPress={() => setActiveTab('qr')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tabText, activeTab === 'qr' && styles.activeTabText]}>QR Code</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.tabButton, activeTab === 'number' && styles.activeTab]}
+                  onPress={() => setActiveTab('number')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tabText, activeTab === 'number' && styles.activeTabText]}>Phone Number</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* QR Code Section */}
+              {activeTab === 'qr' && (
+                <View style={styles.qrContainer}>
+                  <Text style={styles.sectionTitle}>Scan QR Code to Pay</Text>
+                  <View style={styles.qrCodeWrapper}>
+                    <QRCode
+                      value="ecocash:payment?amount=0&reference=MyChangeX"
+                      size={width * 0.6}
+                      color={PRIMARY_BLUE}
+                      backgroundColor={WHITE}
+                      logo={require('../assets/ecocash.png')}
+                      logoSize={60}
+                      logoBackgroundColor="transparent"
+                    />
+                  </View>
+                  <Text style={styles.qrHint}>Show this at any Ecocash merchant</Text>
+                </View>
+              )}
+              
+              {/* Phone Number Section */}
               {activeTab === 'number' && (
                 <View style={styles.formContainer}>
                   <Text style={styles.sectionTitle}>Enter Payment Details</Text>
                   
                   <View style={styles.inputContainer}>
-                    <MaterialIcons name="phone" size={24} color="#ffffff" style={styles.inputIcon} />
+                    <MaterialIcons name="phone" size={24} color={PRIMARY_BLUE} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Ecocash Number"
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={LIGHT_TEXT}
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
                       keyboardType="phone-pad"
-                      selectionColor="#ffffff"
+                      selectionColor={PRIMARY_BLUE}
                       autoComplete="tel"
                       textContentType="telephoneNumber"
                       returnKeyType="next"
@@ -124,15 +141,15 @@ const EconetScreen = () => {
                   </View>
                   
                   <View style={styles.inputContainer}>
-                    <MaterialIcons name="attach-money" size={24} color="#ffffff" style={styles.inputIcon} />
+                    <MaterialIcons name="attach-money" size={24} color={PRIMARY_BLUE} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Amount"
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={LIGHT_TEXT}
                       value={amount}
                       onChangeText={setAmount}
                       keyboardType="numeric"
-                      selectionColor="#ffffff"
+                      selectionColor={PRIMARY_BLUE}
                       returnKeyType="done"
                     />
                   </View>
@@ -142,14 +159,9 @@ const EconetScreen = () => {
                     onPress={handleSendPress}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={['#ffffff', '#f8f9fa']}
-                      style={styles.buttonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
+                    <View style={styles.buttonBackground}>
                       <Text style={styles.payButtonText}>Confirm Payment</Text>
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </View>
               )}
@@ -170,19 +182,30 @@ const EconetScreen = () => {
           >
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
+                {/* Logo in modal */}
+                <View style={styles.modalLogoContainer}>
+                  <Image 
+                    source={require('../assets/ecocash.png')}
+                    style={styles.modalLogo}
+                    resizeMode="contain"
+                  />
+                </View>
+                
                 <Text style={styles.modalTitle}>Confirm PIN for the payment</Text>
+                
                 {/* PIN Input */}
-                <View style={[styles.inputContainer, { marginBottom: 8 }]}>
-                  <MaterialIcons name="lock" size={24} color="#0136c0" style={styles.inputIcon} />
+                <View style={[styles.inputContainer, { marginBottom: 8, backgroundColor: WHITE }]}>
+                  <MaterialIcons name="lock" size={24} color={PRIMARY_BLUE} style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, { color: '#0136c0' }]}
+                    style={[styles.input, { color: DARK_TEXT }]}
                     placeholder="Enter PIN"
-                    placeholderTextColor="#b0b0b0"
+                    placeholderTextColor={LIGHT_TEXT}
                     secureTextEntry={true}
                     keyboardType="number-pad"
                     maxLength={6}
                   />
                 </View>
+                
                 <Pressable
                   style={styles.optionButton}
                   onPress={() => handleOptionSelect('Ecocash')}
@@ -190,6 +213,7 @@ const EconetScreen = () => {
                 >
                   <Text style={styles.optionText}>Confirm</Text>
                 </Pressable>
+                
                 <Pressable
                   style={styles.cancelButton}
                   onPress={() => setModalVisible(false)}
@@ -200,15 +224,15 @@ const EconetScreen = () => {
             </View>
           </Pressable>
         </Modal>
-      </SafeAreaView>
-    </LinearGradient>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: BACKGROUND_COLOR,
   },
   background: {
     flex: 1,
@@ -226,10 +250,25 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 40,
   },
+  logoBorderContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: WHITE,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    padding: 16,
+    alignSelf: 'center',
+  },
+  logo: {
+    width: 80,
+    height: 80,
+  },
   header: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#ffffff',
+    color: DARK_TEXT,
     textAlign: 'center',
     marginBottom: 32,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
@@ -239,9 +278,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 32,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: WHITE,
     borderRadius: 12,
     padding: 6,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   tabButton: {
     flex: 1,
@@ -250,16 +291,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   activeTab: {
-    backgroundColor: '#ffffff',
+    backgroundColor: PRIMARY_BLUE,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: LIGHT_TEXT,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
   activeTabText: {
-    color: '#0136c0',
+    color: WHITE,
   },
   qrContainer: {
     alignItems: 'center',
@@ -268,31 +309,33 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#ffffff',
+    color: DARK_TEXT,
     marginBottom: 24,
     textAlign: 'center',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
   },
   qrCodeWrapper: {
-    backgroundColor: '#ffffff',
+    backgroundColor: WHITE,
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.1,
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 4,
       },
     }),
   },
   qrHint: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: LIGHT_TEXT,
     textAlign: 'center',
     marginTop: 12,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
@@ -303,13 +346,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: WHITE,
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 20,
     height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: CARD_BORDER,
   },
   inputIcon: {
     marginRight: 12,
@@ -317,7 +360,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    color: '#ffffff',
+    color: DARK_TEXT,
     fontSize: 16,
     fontWeight: '500',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
@@ -332,7 +375,7 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.1,
         shadowRadius: 4,
       },
       android: {
@@ -340,13 +383,15 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  buttonGradient: {
+  buttonBackground: {
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: PRIMARY_BLUE,
+    borderRadius: 12,
   },
   payButtonText: {
-    color: '#0136c0',
+    color: WHITE,
     fontSize: 17,
     fontWeight: '600',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
@@ -365,15 +410,17 @@ const styles = StyleSheet.create({
   modalView: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: 'white',
+    backgroundColor: WHITE,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.1,
         shadowRadius: 8,
       },
       android: {
@@ -381,11 +428,25 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  modalLogoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: PRIMARY_BLUE,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    padding: 12,
+  },
+  modalLogo: {
+    width: 56,
+    height: 56,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 24,
-    color: '#0136c0',
+    color: DARK_TEXT,
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
     textAlign: 'center',
   },
@@ -393,12 +454,12 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 16,
     marginVertical: 8,
-    backgroundColor: '#0136c0',
+    backgroundColor: PRIMARY_BLUE,
     borderRadius: 12,
     alignItems: 'center',
   },
   optionText: {
-    color: 'white',
+    color: WHITE,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
@@ -407,12 +468,14 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 16,
     marginTop: 16,
-    backgroundColor: '#f1f1f1',
+    backgroundColor: BACKGROUND_COLOR,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   cancelText: {
-    color: '#0136c0',
+    color: PRIMARY_BLUE,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
