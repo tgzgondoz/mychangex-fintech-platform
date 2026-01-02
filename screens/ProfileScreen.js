@@ -634,7 +634,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: BACKGROUND_COLOR,
   },
   backButton: {
     padding: 8,
@@ -651,11 +650,10 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderRadius: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
   },
   profileHeaderCard: {
     overflow: 'hidden',
+    
   },
   profileContent: {
     padding: 24,
@@ -742,13 +740,10 @@ const styles = StyleSheet.create({
   profileItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f5ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#d9e4ff',
+    // Removed background and border
   },
   profileItemInfo: {
     flex: 1,
@@ -772,9 +767,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 20,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ffeaea',
-    backgroundColor: '#fff5f5',
+    // Removed background and border
   },
   logoutContent: {
     flexDirection: 'row',
