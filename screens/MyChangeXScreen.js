@@ -1524,25 +1524,29 @@ const styles = StyleSheet.create({
   },
   modalCloseText: { color: LIGHT_TEXT, fontSize: 16, fontWeight: '600' },
   
-  // Phone Form Modal
+  // Phone Form Modal - UPDATED STYLES
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: DARK_TEXT,
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 12,
+    marginTop: 16,
   },
   textInput: {
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     backgroundColor: LIGHT_BLUE,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   inputHint: {
     fontSize: 12,
     color: LIGHT_TEXT,
-    marginTop: -8,
-    marginBottom: 16,
+    marginTop: 8,
+    marginBottom: 20,
+    marginLeft: 4,
+    lineHeight: 16,
   },
   modalButtons: {
     flexDirection: 'row',
