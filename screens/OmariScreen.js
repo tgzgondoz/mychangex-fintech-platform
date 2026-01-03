@@ -20,7 +20,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
-const PRIMARY_BLUE = "#0136c0";
+const SUCCESS_GREEN = "#10b981"; // Emerald green for success
 const WHITE = "#ffffff";
 const DARK_TEXT = "#1A1A1A";
 const LIGHT_TEXT = "#666666";
@@ -70,7 +70,7 @@ const OmariScreen = () => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.contentContainer}>
-              {/* Logo with blue border background */}
+              {/* Logo with green border background */}
               <View style={styles.logoBorderContainer}>
                 <Image 
                   source={require('../assets/omari.png')}
@@ -114,7 +114,7 @@ const OmariScreen = () => {
                     <QRCode
                       value="omari:payment?amount=0&reference=MyChangeX"
                       size={width * 0.6}
-                      color={PRIMARY_BLUE}
+                      color={SUCCESS_GREEN}
                       backgroundColor={WHITE}
                       logo={require('../assets/omari.png')}
                       logoSize={width * 0.18}
@@ -134,7 +134,7 @@ const OmariScreen = () => {
                     <MaterialIcons 
                       name="phone" 
                       size={24} 
-                      color={PRIMARY_BLUE} 
+                      color={SUCCESS_GREEN} 
                       style={styles.inputIcon} 
                     />
                     <TextInput
@@ -144,7 +144,7 @@ const OmariScreen = () => {
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
                       keyboardType="phone-pad"
-                      selectionColor={PRIMARY_BLUE}
+                      selectionColor={SUCCESS_GREEN}
                       autoComplete="tel"
                       textContentType="telephoneNumber"
                       returnKeyType="next"
@@ -155,7 +155,7 @@ const OmariScreen = () => {
                     <MaterialIcons 
                       name="attach-money" 
                       size={24} 
-                      color={PRIMARY_BLUE} 
+                      color={SUCCESS_GREEN} 
                       style={styles.inputIcon} 
                     />
                     <TextInput
@@ -165,7 +165,7 @@ const OmariScreen = () => {
                       value={amount}
                       onChangeText={setAmount}
                       keyboardType="numeric"
-                      selectionColor={PRIMARY_BLUE}
+                      selectionColor={SUCCESS_GREEN}
                       returnKeyType="done"
                     />
                   </View>
@@ -214,7 +214,7 @@ const OmariScreen = () => {
                 
                 {/* PIN Input */}
                 <View style={[styles.inputContainer, { marginBottom: 8, backgroundColor: WHITE }]}>
-                  <MaterialIcons name="lock" size={24} color={PRIMARY_BLUE} style={styles.inputIcon} />
+                  <MaterialIcons name="lock" size={24} color={SUCCESS_GREEN} style={styles.inputIcon} />
                   <TextInput
                     style={[styles.input, { color: DARK_TEXT }]}
                     placeholder="Enter PIN"
@@ -273,12 +273,14 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: WHITE ,
+    backgroundColor: WHITE,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
     padding: 16,
     alignSelf: 'center',
+    borderWidth: 3,
+    borderColor: SUCCESS_GREEN,
   },
   logo: {
     width: 80,
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   activeTab: {
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: SUCCESS_GREEN,
   },
   pressedTab: {
     opacity: 0.8,
@@ -341,11 +343,11 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderWidth: 2,
+    borderColor: SUCCESS_GREEN,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: SUCCESS_GREEN,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -373,8 +375,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 20,
     height: 56,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderWidth: 1.5,
+    borderColor: SUCCESS_GREEN,
   },
   inputIcon: {
     marginRight: 12,
@@ -395,9 +397,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: SUCCESS_GREEN,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.2,
         shadowRadius: 4,
       },
       android: {
@@ -409,7 +411,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: SUCCESS_GREEN,
     borderRadius: 12,
   },
   payButtonPressed: {
@@ -437,11 +439,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderWidth: 2,
+    borderColor: SUCCESS_GREEN,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: SUCCESS_GREEN,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -455,7 +457,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: SUCCESS_GREEN,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -475,7 +477,7 @@ const styles = StyleSheet.create({
   optionButton: {
     width: '100%',
     padding: 16,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: SUCCESS_GREEN,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
@@ -491,11 +493,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     backgroundColor: BACKGROUND_COLOR,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderWidth: 1.5,
+    borderColor: SUCCESS_GREEN,
   },
   cancelText: {
-    color: PRIMARY_BLUE,
+    color: SUCCESS_GREEN,
     fontSize: 16,
     fontWeight: '600',
   },

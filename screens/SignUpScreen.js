@@ -48,6 +48,7 @@ const SignupScreen = () => {
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dbConnected, setDbConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState(null);
 
   useLayoutEffect(() => {
@@ -65,6 +66,7 @@ const SignupScreen = () => {
 
   const testDatabaseConnection = async () => {
     try {
+      setIsConnecting(true);
       const connected = await testSupabaseConnection();
       if (isMounted.current) {
         setDbConnected(connected);
@@ -73,6 +75,10 @@ const SignupScreen = () => {
       console.error('Database connection test failed:', error);
       if (isMounted.current) {
         setDbConnected(false);
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsConnecting(false);
       }
     }
   };
@@ -372,17 +378,15 @@ const SignupScreen = () => {
                 <Text style={styles.welcomeText}>Create Account</Text>
                 <Text style={styles.subText}>Join us to get started</Text>
 
-                {/* Database Status */}
-                <View
-                  style={[
-                    styles.dbStatus,
-                    dbConnected ? styles.dbConnected : styles.dbDisconnected,
-                  ]}
-                >
-                  <Text style={styles.dbStatusText}>
-                    {dbConnected ? "✓ CONNECTED" : "⚠ CONNECTING..."}
+                {/* Database Status - Only shows after connecting attempt completes */}
+                {!isConnecting && (
+                  <Text style={[
+                    styles.statusText,
+                    dbConnected ? styles.connectedText : styles.disconnectedText
+                  ]}>
+                    {dbConnected ? '✓ CONNECTED' : 'DISCONNECTED'}
                   </Text>
-                </View>
+                )}
               </View>
 
               <View style={styles.formContainer}>
@@ -582,7 +586,7 @@ const SignupScreen = () => {
                       <ActivityIndicator color={WHITE} size="small" />
                     ) : (
                       <Text style={styles.buttonText}>
-                        {dbConnected ? "Create Account" : "Connecting..."}
+                        {dbConnected ? "Create Account" : 'Connecting...'}
                       </Text>
                     )}
                   </View>
@@ -601,8 +605,6 @@ const SignupScreen = () => {
                     <Text style={styles.loginLink}>Login</Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* Removed: Security Info Container */}
               </View>
             </View>
           </ScrollView>
@@ -663,28 +665,18 @@ const styles = StyleSheet.create({
     color: LIGHT_TEXT,
     fontWeight: "500",
     textAlign: "center",
-    marginBottom: 16,
-  },
-  dbStatus: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
     marginBottom: 8,
   },
-  dbConnected: {
-    backgroundColor: "rgba(0, 200, 83, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(0, 200, 83, 0.3)",
-  },
-  dbDisconnected: {
-    backgroundColor: "rgba(255, 82, 82, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 82, 82, 0.3)",
-  },
-  dbStatusText: {
-    color: DARK_TEXT,
+  statusText: {
     fontSize: 12,
     fontWeight: "600",
+    marginTop: 4,
+  },
+  connectedText: {
+    color: SUCCESS_GREEN,
+  },
+  disconnectedText: {
+    color: ERROR_RED,
   },
   formContainer: {
     paddingHorizontal: width * 0.08,
@@ -800,7 +792,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: "underline",
   },
-  // Removed: securityInfoContainer and securityInfoText styles
 });
 
 export default SignupScreen;
