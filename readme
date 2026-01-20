@@ -1,0 +1,6 @@
+# Open a NEW PowerShell terminal (don't close this one)
+# Navigate to your project:
+cd "C:\Users\Tatenda Gondo\Desktop\mychangex-fintech-platform"
+
+# Start Metro bundler
+npx expo start

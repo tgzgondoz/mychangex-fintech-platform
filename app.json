@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "tatenda_gondo",
     "name": "mychangex-proper",
     "slug": "mychangex-proper",
     "version": "1.0.0",
@@ -21,16 +22,20 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.tatenda_gondo.mychangexproper"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "d511815b-09cc-4d6d-9e16-7e25cf80ca7a"
+        "projectId": "49a733a1-0cbc-4b51-86bf-31756472157f"
       }
     },
-    "owner": "gashie22"
+    "plugins": [
+      "expo-secure-store",
+      "expo-build-properties"
+    ]
   }
 }
