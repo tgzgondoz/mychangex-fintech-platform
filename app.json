@@ -14,7 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": ".",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,6 +36,13 @@
       "eas": {
         "projectId": "49a733a1-0cbc-4b51-86bf-31756472157f"
       }
+    },
+    "scripts": {
+      "build:dev:all": "eas build --profile development --platform all",
+      "build:dev:android": "eas build --profile development --platform android",
+      "build:dev:ios": "eas build --profile development --platform ios",
+      "build:prod:all": "eas build --profile production --platform all",
+      "build:preview:all": "eas build --profile preview --platform all"
     },
     "plugins": [
       "expo-secure-store",
