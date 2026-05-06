@@ -1,8 +1,8 @@
 {
   "expo": {
     "owner": "tatenda_gondo",
-    "name": "mychangex-proper",
-    "slug": "mychangex-proper",
+    "name": "mychangex",
+    "slug": "mychangex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
