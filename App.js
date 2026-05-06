@@ -251,6 +251,7 @@ export default function App() {
             <Stack.Screen name="Econet" component={EconetScreen} />
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
+            <Stack.Screen name="OneMoney" component={OneMoneyScreen} />
             {/* ADDED: CouponTransaction for authenticated users */}
             <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
 
@@ -307,6 +308,7 @@ export default function App() {
             <Stack.Screen name="Econet" component={EconetScreen} />
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
+            <Stack.Screen name="OneMoney" component={OneMoneyScreen} />
             <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
           </>
         )}
@@ -370,5 +372,6 @@ import SuccessPay from './screens/SuccessPay';
 import EconetScreen from './screens/EconetScreen';
 import MyChangeXScreen from './screens/MyChangeXScreen';
 import OmariScreen from './screens/OmariScreen';
+import OneMoneyScreen from './screens/OneMoneyScreen';
 import OTPVerificationScreen from './screens/OTPVerificationScreen';
 import CouponTransactionsScreen from './screens/CouponTransactionsScreen';

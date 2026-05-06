@@ -53,6 +53,7 @@ const BACKGROUND_COLOR = "#f8f9fa";
 const ecocashLogo = require("../assets/ecocash-logo.png");
 const omariLogo = require("../assets/omari.png");
 const mychangexLogo = require("../assets/logo.png");
+const oneMoneyLogo = require("../assets/one-money.png");
 
 const HomeScreen = ({
   navigation,
@@ -268,6 +269,7 @@ const HomeScreen = ({
     navigation.navigate("Recieve");
   };
 
+  // ✅ UPDATED: Added "onemoney" case to handle OneMoney navigation
   const handlePlatformSelect = (platform) => {
     closeSendModal();
     setTimeout(() => {
@@ -280,6 +282,9 @@ const HomeScreen = ({
           break;
         case "mychangex":
           navigation.navigate("MyChangeX");
+          break;
+        case "onemoney":
+          navigation.navigate("OneMoney");
           break;
         default:
           console.log("Unknown platform:", platform);
@@ -335,7 +340,6 @@ const HomeScreen = ({
     return (
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          {/* Removed the Ionicons wallet icon */}
           <Text style={styles.headerTitle}>MyChangeX</Text>
         </View>
         <View style={styles.headerRight}>
@@ -368,6 +372,7 @@ const HomeScreen = ({
       </View>
     );
   };
+
   const ProfileCard = () => {
     const handleProfilePress = () => {
       navigation.navigate("Profile");
@@ -584,100 +589,126 @@ const HomeScreen = ({
     </View>
   );
 
- const SendPlatformModal = () => (
-  <Modal
-    animationType="slide"
-    transparent={true}
-    visible={isSendModalVisible}
-    onRequestClose={closeSendModal}
-  >
-    <View style={styles.modalOverlay}>
-      <Pressable style={styles.modalBackdrop} onPress={closeSendModal} />
-      <View style={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Select Platform</Text>
-        </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("ecocash")}
-        >
-          <View style={styles.platformIconContainer}>
-            <Image
-              source={ecocashLogo}
-              style={styles.platformImage}
-              resizeMode="contain"
-            />
+  const SendPlatformModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isSendModalVisible}
+      onRequestClose={closeSendModal}
+    >
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalBackdrop} onPress={closeSendModal} />
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Platform</Text>
           </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>EcoCash</Text>
-            <Text style={styles.platformDescription}>
-              Send via EcoCash wallet
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("omari")}
-        >
-          <View style={styles.platformIconContainer}>
-            <Image
-              source={omariLogo}
-              style={styles.platformImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>Omari</Text>
-            <Text style={styles.platformDescription}>
-              Send via Omari platform
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("mychangex")}
-        >
-          <View
-            style={[
-              styles.platformIconContainer,
-              { backgroundColor: PRIMARY_BLUE },
+          {/* MyChangeX - First */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.platformItem,
+              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
             ]}
+            onPress={() => handlePlatformSelect("mychangex")}
           >
-            <Image
-              source={mychangexLogo}
-              style={[styles.platformImage, styles.mychangexLogo]}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>MyChangeX</Text>
-            <Text style={styles.platformDescription}>
-              Send within MyChangeX network
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
-        <TouchableOpacity
-          style={styles.modalCloseButton}
-          onPress={closeSendModal}
-        >
-          <Text style={styles.modalCloseText}>Cancel</Text>
-        </TouchableOpacity>
+            <View
+              style={[
+                styles.platformIconContainer,
+                { backgroundColor: PRIMARY_BLUE },
+              ]}
+            >
+              <Image
+                source={mychangexLogo}
+                style={[styles.platformImage, styles.mychangexLogo]}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.platformInfo}>
+              <Text style={styles.platformName}>MyChangeX</Text>
+              <Text style={styles.platformDescription}>
+                Send within MyChangeX network
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </Pressable>
+          {/* EcoCash - Second */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.platformItem,
+              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+            ]}
+            onPress={() => handlePlatformSelect("ecocash")}
+          >
+            <View style={styles.platformIconContainer}>
+              <Image
+                source={ecocashLogo}
+                style={styles.platformImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.platformInfo}>
+              <Text style={styles.platformName}>EcoCash</Text>
+              <Text style={styles.platformDescription}>
+                Send via EcoCash wallet
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </Pressable>
+          {/* OneMoney - Third */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.platformItem,
+              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+            ]}
+            onPress={() => handlePlatformSelect("onemoney")}
+          >
+            <View style={styles.platformIconContainer}>
+              <Image
+                source={oneMoneyLogo}
+                style={styles.platformImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.platformInfo}>
+              <Text style={styles.platformName}>OneMoney</Text>
+              <Text style={styles.platformDescription}>
+                Send via OneMoney wallet
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </Pressable>
+          {/* Omari - Fourth */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.platformItem,
+              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+            ]}
+            onPress={() => handlePlatformSelect("omari")}
+          >
+            <View style={styles.platformIconContainer}>
+              <Image
+                source={omariLogo}
+                style={styles.platformImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.platformInfo}>
+              <Text style={styles.platformName}>Omari</Text>
+              <Text style={styles.platformDescription}>
+                Send via Omari platform
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </Pressable>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={closeSendModal}
+          >
+            <Text style={styles.modalCloseText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
 
   return (
     <View style={styles.background}>
@@ -975,4 +1006,5 @@ const styles = StyleSheet.create({
   },
   modalCloseText: { color: LIGHT_TEXT, fontSize: 16, fontWeight: "600" },
 });
+
 export default HomeScreen;
