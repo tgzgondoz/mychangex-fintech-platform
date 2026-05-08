@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
 });
 
 // Add these imports at the top with your other imports
+// Add these imports at the top of App.js
 import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -375,6 +376,6 @@ import EconetScreen from './screens/EconetScreen';
 import MyChangeXScreen from './screens/MyChangeXScreen';
 import OmariScreen from './screens/OmariScreen';
 import OneMoneyScreen from './screens/OneMoneyScreen';
-import PayNowScreen from './screens/PayNowScreen';
+import PayNowScreen from './screens/PayNowScreen';  // ← Make sure this points to the SCREEN file
 import OTPVerificationScreen from './screens/OTPVerificationScreen';
 import CouponTransactionsScreen from './screens/CouponTransactionsScreen';

@@ -1,3 +1,4 @@
+// screens/PayNowScreen.js
 import React, { useState, useLayoutEffect } from 'react';
 import { 
   View, 
@@ -15,7 +16,8 @@ import {
   ScrollView,
   Image,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,35 +50,46 @@ const PayNowScreen = () => {
   }, [navigation]);
 
   const handleSendPress = async () => {
-    if (!phoneNumber || !amount || !email) {
+    if (!phoneNumber || !amount) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const amountNum = parseFloat(amount);
+    
+    if (isNaN(amountNum) || amountNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
 
     setLoading(true);
     try {
-      const result = await startPayment(parseFloat(amount), phoneNumber, 'mobilemoney', email);
+      const userEmail = email || 'customer@mychangex.com';
+      const result = await startPayment(amountNum, cleanPhone, 'ecocash', userEmail);
       
       if (result && result.status === 'Ok') {
-        setModalVisible(true);
-        // Start polling for payment status
-        if (result.pollUrl) {
-          const interval = setInterval(async () => {
-            const status = await pollPaymentStatus(result.pollUrl);
-            if (status.status === 'Paid') {
-              clearInterval(interval);
-              Alert.alert('Success', 'Payment completed successfully!');
-              setModalVisible(false);
-              navigation.goBack();
-            }
-          }, 3000);
-        }
+        Alert.alert(
+          'Payment Initiated',
+          'Please complete payment on the PayNow page.',
+          [
+            {
+              text: 'Open Payment Page',
+              onPress: () => {
+                if (result.browserurl) {
+                  Linking.openURL(result.browserurl);
+                }
+              }
+            },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
       } else {
         Alert.alert('Error', result?.error || 'Payment initiation failed');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      Alert.alert('Error', 'Failed to initiate payment. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to initiate payment');
     } finally {
       setLoading(false);
     }
@@ -112,7 +125,6 @@ const PayNowScreen = () => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.contentContainer}>
-              {/* Logo with blue border background */}
               <View style={[styles.logoBorderContainer, { borderColor: PRIMARY_COLOR }]}>
                 <Image 
                   source={require('../assets/paynow-logo.jpg')}
@@ -123,7 +135,6 @@ const PayNowScreen = () => {
               
               <Text style={styles.header}>PayNow Payment</Text>
               
-              {/* Tab Selector */}
               <View style={styles.tabContainer}>
                 <TouchableOpacity 
                   style={[styles.tabButton, activeTab === 'qr' && styles.activeTab]}
@@ -142,7 +153,6 @@ const PayNowScreen = () => {
                 </TouchableOpacity>
               </View>
               
-              {/* QR Code Section */}
               {activeTab === 'qr' && (
                 <View style={styles.qrContainer}>
                   <Text style={styles.sectionTitle}>Scan QR Code to Pay</Text>
@@ -161,7 +171,6 @@ const PayNowScreen = () => {
                 </View>
               )}
               
-              {/* Phone Number Section */}
               {activeTab === 'number' && (
                 <View style={styles.formContainer}>
                   <Text style={styles.sectionTitle}>Enter Payment Details</Text>
@@ -170,15 +179,12 @@ const PayNowScreen = () => {
                     <MaterialIcons name="phone" size={24} color={PRIMARY_COLOR} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="PayNow Number"
+                      placeholder="Phone Number (263xxxxxxxxx)"
                       placeholderTextColor={LIGHT_TEXT}
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
                       keyboardType="phone-pad"
                       selectionColor={PRIMARY_COLOR}
-                      autoComplete="tel"
-                      textContentType="telephoneNumber"
-                      returnKeyType="next"
                     />
                   </View>
 
@@ -186,15 +192,12 @@ const PayNowScreen = () => {
                     <MaterialIcons name="email" size={24} color={PRIMARY_COLOR} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Email Address"
+                      placeholder="Email Address (optional)"
                       placeholderTextColor={LIGHT_TEXT}
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
                       selectionColor={PRIMARY_COLOR}
-                      autoComplete="email"
-                      textContentType="emailAddress"
-                      returnKeyType="next"
                     />
                   </View>
                   
@@ -208,7 +211,6 @@ const PayNowScreen = () => {
                       onChangeText={setAmount}
                       keyboardType="numeric"
                       selectionColor={PRIMARY_COLOR}
-                      returnKeyType="done"
                     />
                   </View>
                   
@@ -232,20 +234,15 @@ const PayNowScreen = () => {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* PIN Confirmation Modal */}
         <Modal
-          animationType={Platform.OS === 'ios' ? 'fade' : 'slide'}
+          animationType="slide"
           transparent={true}
           visible={modalVisible}
           onRequestClose={() => setModalVisible(false)}
         >
-          <Pressable 
-            style={styles.modalOverlay} 
-            onPress={() => setModalVisible(false)}
-          >
+          <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
-                {/* Logo in modal */}
                 <View style={[styles.modalLogoContainer, { backgroundColor: PRIMARY_COLOR }]}>
                   <Image 
                     source={require('../assets/paynow-logo.jpg')}
@@ -254,9 +251,8 @@ const PayNowScreen = () => {
                   />
                 </View>
                 
-                <Text style={styles.modalTitle}>Confirm PIN for the payment</Text>
+                <Text style={styles.modalTitle}>Confirm PIN</Text>
                 
-                {/* PIN Input */}
                 <View style={[styles.inputContainer, { marginBottom: 8, backgroundColor: WHITE }]}>
                   <MaterialIcons name="lock" size={24} color={PRIMARY_COLOR} style={styles.inputIcon} />
                   <TextInput
@@ -274,15 +270,11 @@ const PayNowScreen = () => {
                 <Pressable
                   style={[styles.optionButton, { backgroundColor: PRIMARY_COLOR }]}
                   onPress={handleConfirmPin}
-                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
                 >
                   <Text style={styles.optionText}>Confirm</Text>
                 </Pressable>
                 
-                <Pressable
-                  style={styles.cancelButton}
-                  onPress={() => setModalVisible(false)}
-                >
+                <Pressable style={styles.cancelButton} onPress={() => setModalVisible(false)}>
                   <Text style={[styles.cancelText, { color: PRIMARY_COLOR }]}>Cancel</Text>
                 </Pressable>
               </View>
@@ -295,255 +287,40 @@ const PayNowScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  background: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  logoBorderContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: WHITE,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 16,
-    alignSelf: 'center',
-    borderWidth: 2,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: DARK_TEXT,
-    textAlign: 'center',
-    marginBottom: 32,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    letterSpacing: 0.5,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-    backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: {
-    backgroundColor: PRIMARY_COLOR,
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: LIGHT_TEXT,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  activeTabText: {
-    color: WHITE,
-  },
-  qrContainer: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DARK_TEXT,
-    marginBottom: 24,
-    textAlign: 'center',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  qrCodeWrapper: {
-    backgroundColor: WHITE,
-    padding: 24,
-    borderRadius: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  qrHint: {
-    fontSize: 14,
-    color: LIGHT_TEXT,
-    textAlign: 'center',
-    marginTop: 12,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  formContainer: {
-    marginTop: 24,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: WHITE,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    height: 56,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    color: DARK_TEXT,
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    paddingVertical: 0,
-    includeFontPadding: false,
-  },
-  payButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  buttonBackground: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  payButtonText: {
-    color: WHITE,
-    fontSize: 17,
-    fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  centeredView: {
-    width: '100%',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  modalView: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-  modalLogoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 12,
-  },
-  modalLogo: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 24,
-    color: DARK_TEXT,
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-    textAlign: 'center',
-  },
-  optionButton: {
-    width: '100%',
-    padding: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  optionText: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
-  cancelButton: {
-    width: '100%',
-    padding: 16,
-    marginTop: 16,
-    backgroundColor: BACKGROUND_COLOR,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }),
-  },
+  safeArea: { flex: 1, backgroundColor: BACKGROUND_COLOR },
+  background: { flex: 1 },
+  container: { flex: 1 },
+  scrollContainer: { flexGrow: 1 },
+  contentContainer: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
+  logoBorderContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: WHITE, justifyContent: "center", alignItems: "center", marginBottom: 20, padding: 16, alignSelf: 'center', borderWidth: 2 },
+  logo: { width: 80, height: 80, borderRadius: 10 },
+  header: { fontSize: 28, fontWeight: '700', color: DARK_TEXT, textAlign: 'center', marginBottom: 32 },
+  tabContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32, backgroundColor: WHITE, borderRadius: 12, padding: 6, borderWidth: 1, borderColor: CARD_BORDER },
+  tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
+  activeTab: { backgroundColor: PRIMARY_COLOR },
+  tabText: { fontSize: 16, fontWeight: '600', color: LIGHT_TEXT },
+  activeTabText: { color: WHITE },
+  qrContainer: { alignItems: 'center', marginTop: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: DARK_TEXT, marginBottom: 24, textAlign: 'center' },
+  qrCodeWrapper: { backgroundColor: WHITE, padding: 24, borderRadius: 16, marginBottom: 24, borderWidth: 1, borderColor: CARD_BORDER },
+  qrHint: { fontSize: 14, color: LIGHT_TEXT, textAlign: 'center', marginTop: 12 },
+  formContainer: { marginTop: 24 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: WHITE, borderRadius: 12, paddingHorizontal: 16, marginBottom: 20, height: 56, borderWidth: 1, borderColor: CARD_BORDER },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, height: '100%', color: DARK_TEXT, fontSize: 16, fontWeight: '500' },
+  payButton: { borderRadius: 12, overflow: 'hidden', marginTop: 24 },
+  buttonBackground: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  payButtonText: { color: WHITE, fontSize: 17, fontWeight: '600' },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  centeredView: { width: '100%', alignItems: 'center', paddingHorizontal: 24 },
+  modalView: { width: '100%', maxWidth: 400, backgroundColor: WHITE, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: CARD_BORDER },
+  modalLogoContainer: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", marginBottom: 20, padding: 12 },
+  modalLogo: { width: 56, height: 56, borderRadius: 8 },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 24, color: DARK_TEXT, textAlign: 'center' },
+  optionButton: { width: '100%', padding: 16, marginVertical: 8, borderRadius: 12, alignItems: 'center' },
+  optionText: { color: WHITE, fontSize: 16, fontWeight: '600' },
+  cancelButton: { width: '100%', padding: 16, marginTop: 16, backgroundColor: BACKGROUND_COLOR, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: CARD_BORDER },
+  cancelText: { fontSize: 16, fontWeight: '600' },
 });
 
 export default PayNowScreen;
