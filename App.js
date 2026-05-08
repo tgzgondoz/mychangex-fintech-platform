@@ -252,6 +252,7 @@ export default function App() {
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
             <Stack.Screen name="OneMoney" component={OneMoneyScreen} />
+            <Stack.Screen name="PayNow" component={PayNowScreen} />
             {/* ADDED: CouponTransaction for authenticated users */}
             <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
 
@@ -309,6 +310,7 @@ export default function App() {
             <Stack.Screen name="MyChangeX" component={MyChangeXScreen} /> 
             <Stack.Screen name="Omari" component={OmariScreen} />
             <Stack.Screen name="OneMoney" component={OneMoneyScreen} />
+            <Stack.Screen name="PayNow" component={PayNowScreen} />
             <Stack.Screen name="CouponTransaction" component={CouponTransactionsScreen} />
           </>
         )}
@@ -330,12 +332,12 @@ const styles = StyleSheet.create({
   logoBorderContainer: {
     width: 120,
     height: 120,
-    borderRadius: 60, // Makes it perfectly circular
+    borderRadius: 60,
     backgroundColor: PRIMARY_BLUE,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
-    padding: 16, // Adds some padding inside the blue circle
+    padding: 16,
   },
   logo: {
     width: 80,
@@ -373,5 +375,6 @@ import EconetScreen from './screens/EconetScreen';
 import MyChangeXScreen from './screens/MyChangeXScreen';
 import OmariScreen from './screens/OmariScreen';
 import OneMoneyScreen from './screens/OneMoneyScreen';
+import PayNowScreen from './screens/PayNowScreen';
 import OTPVerificationScreen from './screens/OTPVerificationScreen';
 import CouponTransactionsScreen from './screens/CouponTransactionsScreen';

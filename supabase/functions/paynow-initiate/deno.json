@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "paynow": "npm:paynow@^1.1.2"
+  }
+}

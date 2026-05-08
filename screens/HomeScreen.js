@@ -54,6 +54,7 @@ const ecocashLogo = require("../assets/ecocash-logo.png");
 const omariLogo = require("../assets/omari.png");
 const mychangexLogo = require("../assets/logo.png");
 const oneMoneyLogo = require("../assets/one-money.png");
+const paynowLogo = require("../assets/paynow-logo.jpg");
 
 const HomeScreen = ({
   navigation,
@@ -270,27 +271,30 @@ const HomeScreen = ({
   };
 
   // ✅ UPDATED: Added "onemoney" case to handle OneMoney navigation
-  const handlePlatformSelect = (platform) => {
-    closeSendModal();
-    setTimeout(() => {
-      switch (platform) {
-        case "ecocash":
-          navigation.navigate("Econet");
-          break;
-        case "omari":
-          navigation.navigate("Omari");
-          break;
-        case "mychangex":
-          navigation.navigate("MyChangeX");
-          break;
-        case "onemoney":
-          navigation.navigate("OneMoney");
-          break;
-        default:
-          console.log("Unknown platform:", platform);
-      }
-    }, 100);
-  };
+ const handlePlatformSelect = (platform) => {
+  closeSendModal();
+  setTimeout(() => {
+    switch (platform) {
+      case "ecocash":
+        navigation.navigate("Econet");
+        break;
+      case "omari":
+        navigation.navigate("Omari");
+        break;
+      case "mychangex":
+        navigation.navigate("MyChangeX");
+        break;
+      case "onemoney":
+        navigation.navigate("OneMoney");
+        break;
+      case "paynow":
+        navigation.navigate("PayNow");
+        break;
+      default:
+        console.log("Unknown platform:", platform);
+    }
+  }, 100);
+};
 
   const handleServiceSelect = (service) => {
     Alert.alert(
@@ -589,127 +593,149 @@ const HomeScreen = ({
     </View>
   );
 
-  const SendPlatformModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={isSendModalVisible}
-      onRequestClose={closeSendModal}
-    >
-      <View style={styles.modalOverlay}>
-        <Pressable style={styles.modalBackdrop} onPress={closeSendModal} />
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Platform</Text>
-          </View>
-          {/* MyChangeX - First */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.platformItem,
-              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-            ]}
-            onPress={() => handlePlatformSelect("mychangex")}
-          >
-            <View
-              style={[
-                styles.platformIconContainer,
-                { backgroundColor: PRIMARY_BLUE },
-              ]}
-            >
-              <Image
-                source={mychangexLogo}
-                style={[styles.platformImage, styles.mychangexLogo]}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.platformInfo}>
-              <Text style={styles.platformName}>MyChangeX</Text>
-              <Text style={styles.platformDescription}>
-                Send within MyChangeX network
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-          {/* EcoCash - Second */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.platformItem,
-              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-            ]}
-            onPress={() => handlePlatformSelect("ecocash")}
-          >
-            <View style={styles.platformIconContainer}>
-              <Image
-                source={ecocashLogo}
-                style={styles.platformImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.platformInfo}>
-              <Text style={styles.platformName}>EcoCash</Text>
-              <Text style={styles.platformDescription}>
-                Send via EcoCash wallet
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-          {/* OneMoney - Third */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.platformItem,
-              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-            ]}
-            onPress={() => handlePlatformSelect("onemoney")}
-          >
-            <View style={styles.platformIconContainer}>
-              <Image
-                source={oneMoneyLogo}
-                style={styles.platformImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.platformInfo}>
-              <Text style={styles.platformName}>OneMoney</Text>
-              <Text style={styles.platformDescription}>
-                Send via OneMoney wallet
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-          {/* Omari - Fourth */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.platformItem,
-              { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-            ]}
-            onPress={() => handlePlatformSelect("omari")}
-          >
-            <View style={styles.platformIconContainer}>
-              <Image
-                source={omariLogo}
-                style={styles.platformImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.platformInfo}>
-              <Text style={styles.platformName}>Omari</Text>
-              <Text style={styles.platformDescription}>
-                Send via Omari platform
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </Pressable>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={closeSendModal}
-          >
-            <Text style={styles.modalCloseText}>Cancel</Text>
-          </TouchableOpacity>
+ const SendPlatformModal = () => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={isSendModalVisible}
+    onRequestClose={closeSendModal}
+  >
+    <View style={styles.modalOverlay}>
+      <Pressable style={styles.modalBackdrop} onPress={closeSendModal} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Select Platform</Text>
         </View>
+        {/* MyChangeX - First */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.platformItem,
+            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+          ]}
+          onPress={() => handlePlatformSelect("mychangex")}
+        >
+          <View
+            style={[
+              styles.platformIconContainer,
+              { backgroundColor: PRIMARY_BLUE },
+            ]}
+          >
+            <Image
+              source={mychangexLogo}
+              style={[styles.platformImage, styles.mychangexLogo]}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.platformInfo}>
+            <Text style={styles.platformName}>MyChangeX</Text>
+            <Text style={styles.platformDescription}>
+              Send within MyChangeX network
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#666" />
+        </Pressable>
+        {/* EcoCash - Second */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.platformItem,
+            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+          ]}
+          onPress={() => handlePlatformSelect("ecocash")}
+        >
+          <View style={styles.platformIconContainer}>
+            <Image
+              source={ecocashLogo}
+              style={styles.platformImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.platformInfo}>
+            <Text style={styles.platformName}>EcoCash</Text>
+            <Text style={styles.platformDescription}>
+              Send via EcoCash wallet
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#666" />
+        </Pressable>
+        {/* OneMoney - Third */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.platformItem,
+            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+          ]}
+          onPress={() => handlePlatformSelect("onemoney")}
+        >
+          <View style={styles.platformIconContainer}>
+            <Image
+              source={oneMoneyLogo}
+              style={styles.platformImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.platformInfo}>
+            <Text style={styles.platformName}>OneMoney</Text>
+            <Text style={styles.platformDescription}>
+              Send via OneMoney wallet
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#666" />
+        </Pressable>
+        {/* Omari - Fourth */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.platformItem,
+            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+          ]}
+          onPress={() => handlePlatformSelect("omari")}
+        >
+          <View style={styles.platformIconContainer}>
+            <Image
+              source={omariLogo}
+              style={styles.platformImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.platformInfo}>
+            <Text style={styles.platformName}>Omari</Text>
+            <Text style={styles.platformDescription}>
+              Send via Omari platform
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#666" />
+        </Pressable>
+        {/* PayNow - Fifth */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.platformItem,
+            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
+          ]}
+          onPress={() => handlePlatformSelect("paynow")}
+        >
+          <View style={styles.platformIconContainer}>
+            <Image
+              source={paynowLogo}
+              style={styles.platformImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.platformInfo}>
+            <Text style={styles.platformName}>PayNow</Text>
+            <Text style={styles.platformDescription}>
+              Send via PayNow wallet
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#666" />
+        </Pressable>
+        <TouchableOpacity
+          style={styles.modalCloseButton}
+          onPress={closeSendModal}
+        >
+          <Text style={styles.modalCloseText}>Cancel</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
-  );
-
+    </View>
+  </Modal>
+);
   return (
     <View style={styles.background}>
       <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_COLOR} />
