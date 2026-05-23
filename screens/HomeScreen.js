@@ -657,75 +657,7 @@ const HomeScreen = ({
           </View>
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </Pressable>
-        {/* OneMoney - Third */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("onemoney")}
-        >
-          <View style={styles.platformIconContainer}>
-            <Image
-              source={oneMoneyLogo}
-              style={styles.platformImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>OneMoney</Text>
-            <Text style={styles.platformDescription}>
-              Send via OneMoney wallet
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
-        {/* Omari - Fourth */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("omari")}
-        >
-          <View style={styles.platformIconContainer}>
-            <Image
-              source={omariLogo}
-              style={styles.platformImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>Omari</Text>
-            <Text style={styles.platformDescription}>
-              Send via Omari platform
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
-        {/* PayNow - Fifth */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.platformItem,
-            { backgroundColor: pressed ? "#f5f5f5" : WHITE },
-          ]}
-          onPress={() => handlePlatformSelect("paynow")}
-        >
-          <View style={styles.platformIconContainer}>
-            <Image
-              source={paynowLogo}
-              style={styles.platformImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.platformInfo}>
-            <Text style={styles.platformName}>PayNow</Text>
-            <Text style={styles.platformDescription}>
-              Send via PayNow wallet
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </Pressable>
+     
         <TouchableOpacity
           style={styles.modalCloseButton}
           onPress={closeSendModal}
